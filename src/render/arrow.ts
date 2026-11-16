@@ -20,7 +20,7 @@ const ARROW_SPOTS: Record<Face, ArrowSpot> = {
 };
 
 // 오른쪽(+X)을 가리키는 화살표 모양을 만든다. pad만큼 바깥으로 두껍게 그릴 수 있다(테두리용).
-function arrowShape(pad: number): THREE.Shape {
+export function arrowShape(pad: number): THREE.Shape {
   const tail = -1.25 - pad;
   const neck = 0.45 - pad;
   const tip = 1.25 + pad * 1.6;
@@ -39,7 +39,7 @@ function arrowShape(pad: number): THREE.Shape {
 }
 
 // 화살표의 한 겹(테두리 또는 속)을 만든다. 큐브 조각에 가려지지 않도록 항상 맨 위에 그린다.
-function layer(pad: number, color: string, order: number): THREE.Mesh {
+export function layer(pad: number, color: string, order: number): THREE.Mesh {
   const material = new THREE.MeshBasicMaterial({ color, depthTest: false, side: THREE.DoubleSide });
   const mesh = new THREE.Mesh(new THREE.ShapeGeometry(arrowShape(pad)), material);
   mesh.renderOrder = order;

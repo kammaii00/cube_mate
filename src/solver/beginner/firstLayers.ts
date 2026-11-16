@@ -78,7 +78,8 @@ export function dropPetals(b: LessonBuilder, petals: string[]): void {
   placeCheapest(b, petals, (lb, colors) => {
     const white = lb.state[D_CENTER];
     const side = [...colors].find((c) => c !== white)!;
-    lb.begin(1, findPiece(lb.state, colors, EDGE_FACELETS).map((t) => t.cur));
+    const petal = findPiece(lb.state, colors, EDGE_FACELETS);
+    lb.begin(1, petal.map((t) => t.cur), petal.map((t) => t.home));
     const setup = must(findSetup(lb.state, true, (s) =>
       isAt(findPiece(s, colors, EDGE_FACELETS), UF) && s[UF[0]] === white && s[UF[1]] === s[F_CENTER]), '꽃잎 내리기');
     lb.add('turnCube', setup.cube, 'turnColor', { color: side });
@@ -96,7 +97,7 @@ export function placeCorners(b: LessonBuilder): void {
     const find = (s: string) => findPiece(s, colors, CORNER_FACELETS);
     if (isHome(find(lb.state))) return;
     const white = lb.state[D_CENTER];
-    lb.begin(2, find(lb.state).map((t) => t.cur));
+    lb.begin(2, find(lb.state).map((t) => t.cur), find(lb.state).map((t) => t.home));
     for (let guard = 0; guard < 4 && !isHome(find(lb.state)); guard++) {
       if (layerOf(find(lb.state)) < 0) {
         // 아래층에 잘못 끼어 있으면: 그 자리를 앞-오른쪽으로 가져와 공식 한 번으로 꺼낸다
@@ -126,7 +127,7 @@ export function placeMiddleEdges(b: LessonBuilder): void {
   placeCheapest(b, pieces, (lb, colors) => {
     const find = (s: string) => findPiece(s, colors, EDGE_FACELETS);
     if (isHome(find(lb.state))) return;
-    lb.begin(3, find(lb.state).map((t) => t.cur));
+    lb.begin(3, find(lb.state).map((t) => t.cur), find(lb.state).map((t) => t.home));
     for (let guard = 0; guard < 4 && !isHome(find(lb.state)); guard++) {
       if (layerOf(find(lb.state)) === 0) {
         // 2층에 잘못 끼어 있으면: 앞-오른쪽으로 가져와 공식 한 번으로 윗층으로 꺼낸다

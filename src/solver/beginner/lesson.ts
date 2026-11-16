@@ -46,6 +46,8 @@ export interface Mission {
   stage: number;
   /** 이 미션에서 다루는 조각의 칸 번호들 (미션을 시작할 때의 위치) */
   piece: number[];
+  /** 1~4단계: 그 조각이 들어갈 자리의 칸 번호들 (미션을 시작할 때 기준) */
+  slot?: number[];
   chunks: Chunk[];
 }
 
@@ -67,8 +69,8 @@ export class LessonBuilder {
   }
 
   // 새 미션을 시작한다
-  begin(stage: number, piece: number[]): void {
-    this.current = { stage, piece, chunks: [] };
+  begin(stage: number, piece: number[], slot?: number[]): void {
+    this.current = { stage, piece, slot, chunks: [] };
   }
 
   // 묶음 하나를 추가하고 큐브에 적용한다 (회전이 없으면 아무것도 하지 않는다)

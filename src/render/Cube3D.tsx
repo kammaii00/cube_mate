@@ -1,7 +1,8 @@
 // CubeScene(3D 큐브)을 React 화면에 끼워 넣는 컴포넌트
 import { useEffect, useRef } from 'react';
 import type { Move } from '../core/moves';
-import { CubeScene } from './CubeScene';
+import { useI18n } from '../i18n';
+import { CubeScene, type Marks } from './CubeScene';
 
 interface Props {
   /** 표시할 큐브 상태 (move가 있으면 회전 전 상태) */
@@ -14,6 +15,8 @@ interface Props {
   duration?: number;
   /** 정지 화면일 때 이 칸들만 선명하게, 나머지는 흐리게 보여준다 */
   highlight?: number[] | null;
+  /** 정지 화면일 때 "이 조각"과 "들어갈 자리"를 화살표로 표시할 칸들 */
+  marks?: Marks | null;
   /** true면 큐브가 제자리에서 천천히 돈다 (완성 화면용) */
   spin?: boolean;
   /** 애니메이션이 끝났을 때 호출 */
@@ -21,7 +24,8 @@ interface Props {
 }
 
 // 3D 큐브를 표시하고, move가 주어지면 그 회전을 재생한다
-export function Cube3D({ state, move, playId = 0, duration = 1100, highlight, spin = false, onAnimationEnd }: Props) {
+export function Cube3D({ state, move, playId = 0, duration = 1100, highlight, marks, spin = false, onAnimationEnd }: Props) {
+  const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<CubeScene | null>(null);
   const endRef = useRef(onAnimationEnd);
@@ -39,8 +43,9 @@ export function Cube3D({ state, move, playId = 0, duration = 1100, highlight, sp
   useEffect(() => {
     const scene = sceneRef.current;
     if (!scene) return;
+    scene.setLabels({ piece: t('pointPiece'), slot: t('pointSlot') });
     if (!move) {
-      scene.setState(state, highlight);
+      scene.setState(state, highlight, marks);
       return;
     }
     let active = true;
@@ -49,7 +54,7 @@ export function Cube3D({ state, move, playId = 0, duration = 1100, highlight, sp
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, move, playId, duration, spin, highlight?.join(',')]);
+  }, [state, move, playId, duration, spin, highlight?.join(','), marks?.piece?.join(','), marks?.slot?.join(','), t]);
 
   return <div ref={containerRef} className="cube3d" />;
 }

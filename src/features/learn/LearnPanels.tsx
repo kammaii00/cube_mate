@@ -74,7 +74,7 @@ function MissionIntro({ frame, onNext, onPrev }: PanelProps) {
       <Bubble>
         <strong className="move-title">{t(`mission${frame.stage + 1}Head` as MessageKey, params)}</strong>
         <span>{t(`mission${frame.stage + 1}Text` as MessageKey, params)}</span>
-        <small>{t(visible ? 'missionVisible' : 'missionHidden')}</small>
+        <small>{t(visible ? 'missionVisible' : 'missionHidden')}{frame.mission!.slot ? ' ' + t('missionSlot') : ''}</small>
       </Bubble>
       <Buttons main={t('missionFound')} onMain={onNext}>
         <button className="btn small" onClick={onPrev}>◀ {t('guidePrev')}</button>

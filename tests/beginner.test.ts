@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { SOLVED } from '../src/core/faces';
+import { FACELETS, SOLVED } from '../src/core/faces';
 import { applyMoves, flipUpsideDown, isSolved } from '../src/core/moves';
 import { randomMoves } from '../src/core/scramble';
 import { buildFrames, formulaUse, stagePicture } from '../src/features/learn/frames';
@@ -74,6 +74,16 @@ describe('배우며 풀기 (초보자 공식)', () => {
           expect(picture.state[cell]).toBe(picture.state[Math.floor(cell / 9) * 9 + 4]);
       }
       expect(formulaUse(missions).every(([, count]) => count > 0)).toBe(true);
+      // 1~4단계 미션에는 "들어갈 자리"가 있고, 그 자리는 한 조각 안의 칸들이며 색이 가운데 색과 맞는다
+      let at = start;
+      for (const mission of missions) {
+        if (mission.stage >= 1 && mission.stage <= 3) {
+          expect(mission.slot?.length).toBe(mission.piece.length);
+          expect(new Set(mission.slot!.map((c) => FACELETS[c].pos.join())).size).toBe(1);
+          mission.slot!.forEach((cell, k) => expect(at[mission.piece[k]]).toBe(at[Math.floor(cell / 9) * 9 + 4]));
+        } else expect(mission.slot).toBeUndefined();
+        at = mission.chunks.reduce((st, c) => applyMoves(st, c.moves), at);
+      }
     }
   });
   it('이미 완성된 큐브는 회전이 없다', () => {

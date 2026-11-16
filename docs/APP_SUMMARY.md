@@ -36,7 +36,7 @@ AI는 작업 시 아래 구조를 참고하여 파일을 탐색하고 수정해�
  ┃ ┃                #   lastLayer.ts(5~8단계), search.ts(공식 조합 탐색), pieces.ts(조각 찾기), index.ts
  ┃ ┣ 📂 scanner/    # 카메라 켜기·색 읽기(useCamera.ts), 색 계산(colorMath.ts), 54칸 분류(classify.ts),
  ┃ ┃                #   화면 분석(frame.ts: 9칸 색·칸 사이 틈), 자동 촬영 판단·중복 면 찾기(autoCapture.ts), 면 이름·방향 추론(orient.ts)
- ┃ ┣ 📂 render/     # 3D 큐브 (CubeScene.ts: Three.js 클래스, arrow.ts: 회전 방향 화살표, Cube3D.tsx: React 연결)
+ ┃ ┣ 📂 render/     # 3D 큐브 (CubeScene.ts: Three.js 클래스, arrow.ts: 회전 방향 화살표, pointer.ts: 안 보이는 곳·조각·자리를 가리키는 이름표 화살표(안 보이는 조각·자리는 이름표 없이 큐브 밖에서 화살표만), 자리 칸은 분홍색 깜빡임, Cube3D.tsx: React 연결). 큐브는 손가락으로 끌어 돌려 볼 수 있고 손을 떼면 제자리로 돌아온다
  ┃ ┣ 📂 features/   # 화면별 폴더 (home, scan[ScanScreen, CaptureSlots], edit, guide[빨리 맞추기 안내], done,
  ┃ ┃                #   learn[배우면서 맞추기: frames.ts 장면 목록, LearnScreen, LearnPanels, FormulaStrip])
  ┃ ┣ 📂 widgets/    # 공통 UI: Mascot(큐비), Bubble(말풍선), Confetti(색종이)
@@ -68,6 +68,7 @@ AI는 작업 시 아래 구조를 참고하여 파일을 탐색하고 수정해�
 * 카메라는 `localhost` 또는 HTTPS 주소에서만 동작한다.
 
 ## 📝 7. 최근 주요 업데이트 내역
+* [2026-11-16]: 보이지 않는 면(아래·왼쪽·뒤)·조각을 화살표+이름표로 표시, 1~4단계 미션에 "이 조각"과 "들어갈 자리"(칸 색 분홍 깜빡임) 표시(Mission.slot), 큐브 끌어서 돌려 보기(손 떼면 복귀).
 * [2026-11-16]: 배우면서 맞추기를 8단계 수업으로 전면 개편 — 규칙 기반 풀이(조각별 미션·이유 설명), 큐브 통째 돌리기(y), 공식 줄, 혼자 해보기, 단계별 목표·확인 그림.
 * [2026-11-16]: 자동 촬영이 안 되던 문제 수정(멈춤 판정 완화·틈 검사는 한 색 면에만 엄격 적용), 같은 면 중복 촬영 방지, 색별 촬영 현황 UI.
 * [2026-11-16]: 자동 촬영 조건 강화 — 큐브 색 확인, 칸 사이 틈 확인, 촬영 후 움직임 확인 (배경이 찍히던 문제 수정).

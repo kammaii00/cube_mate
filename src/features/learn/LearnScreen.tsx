@@ -42,6 +42,7 @@ export function LearnScreen({ solution, onDone, onBack }: Props) {
   const picture =
     frame.type === 'stageIntro' || frame.type === 'stageDone' ? stagePicture(frame.stage, frame.state)
     : { state: frame.state, highlight: frame.type === 'mission' ? frame.mission!.piece : null, flipped: false };
+  const marks = frame.type === 'mission' ? { piece: frame.mission!.piece, slot: frame.mission!.slot } : null;
   const caption =
     frame.type === 'stageIntro' ? t(picture.flipped ? 'stageFlipped' : 'stageGoalPic')
     : frame.type === 'stageDone' && picture.flipped ? t('stageFlipped')
@@ -69,6 +70,7 @@ export function LearnScreen({ solution, onDone, onBack }: Props) {
           state={picture.state}
           move={frame.type === 'move' ? frame.move : null}
           highlight={picture.highlight}
+          marks={marks}
           playId={playId}
         />
         {caption && <div className="cube-caption">{caption}</div>}
@@ -93,6 +95,7 @@ export function LearnScreen({ solution, onDone, onBack }: Props) {
         onShowFormula={() => setShowFormula(true)}
       />
       {frame.type === 'move' && <p className="hint">{t('learnKeep')}</p>}
+      {frame.type === 'mission' && <p className="hint">{t('dragHint')}</p>}
     </main>
   );
 }

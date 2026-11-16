@@ -1,18 +1,31 @@
 // Three.js로 3D 큐브를 그리고 회전 애니메이션을 재생한다 (React와 무관한 순수 클래스)
 // 시점은 항상 고정(위·앞·오른쪽이 보임)이라, 아이들이 손에 든 큐브와 그대로 비교할 수 있다.
 import * as THREE from 'three';
-import { FACELETS, FACE_COLORS, FACE_NORMALS, type Face } from '../core/faces';
+import { FACELETS, FACE_COLORS, FACE_NORMALS, type Face, type Vec3 } from '../core/faces';
 import { applyMove, parseMove, wholeTurns, type Move } from '../core/moves';
 import { MoveArrow } from './arrow';
+import { Pointer } from './pointer';
 
 const UNSET_COLOR = '#b9c4d6';
 /** 돌리지 않는 조각을 흐리게 만들 때 섞는 색 */
 const FADE_COLOR = new THREE.Color('#dfe9f5');
 /** 특정 칸만 보여줄 때 나머지 칸에 섞는 색 (흰색 칸과도 구분되도록 어둡게) */
+/** 들어갈 자리 칸을 칠하는 분홍색 */
+const SLOT_COLOR = new THREE.Color('#ff3db8');
 const DIM_COLOR = new THREE.Color('#8a94ad');
-const VIEW_POSITION = new THREE.Vector3(0.62, 0.55, 0.9).normalize().multiplyScalar(8.6);
+const VIEW_DIRECTION = new THREE.Vector3(0.62, 0.55, 0.9).normalize();
+const VIEW_POSITION = VIEW_DIRECTION.clone().multiplyScalar(9.8);
 /** 화살표만 먼저 보여주고 회전을 시작하기까지 기다리는 시간(ms) */
 const LEAD_TIME = 800;
+
+/** 화면에 따로 표시할 칸들: 찾을 조각과 그 조각이 들어갈 자리 */
+export interface Marks {
+  piece?: number[];
+  slot?: number[];
+}
+
+/** 화살표 이름표 글자 (조각, 자리). 안 보이는 쪽을 가리키는 화살표에는 이름표를 붙이지 않는다 */
+export type PointerLabels = Partial<Record<'piece' | 'slot', string>>;
 
 interface Animation {
   cubies: THREE.Group[];
@@ -49,6 +62,15 @@ export class CubeScene {
   private stickers: THREE.Mesh<THREE.ShapeGeometry, THREE.MeshBasicMaterial>[] = [];
   /** 화살표 3개: 보통은 첫 번째만 쓰고, 큐브를 통째로 돌릴 때는 세 줄 모두에 띄운다 */
   private arrows = [new MoveArrow(), new MoveArrow(), new MoveArrow()];
+  /** 보이지 않는 곳을 가리키는 화살표 2개와 들어갈 자리 상자 */
+  private pointers = [new Pointer(VIEW_DIRECTION), new Pointer(VIEW_DIRECTION)];
+  /** 들어갈 자리 칸들을 분홍색으로 깜빡이게 하기 위한 원래 색 */
+  private pulse: { cells: number[]; colors: THREE.Color[] } | null = null;
+  private labels: PointerLabels = {};
+  /** 손가락으로 큐브를 돌려 본 정도(좌우, 상하). 손을 떼면 0으로 돌아간다 */
+  private drag = { yaw: 0, pitch: 0, active: false, x: 0, y: 0 };
+  /** 보이지 않는 곳을 가리키는 화살표들을 담는 층 (큐브를 돌려 보는 동안은 숨긴다) */
+  private pointerLayer = new THREE.Group();
   private animation: Animation | null = null;
   private frameId = 0;
   private resizeObserver: ResizeObserver;
@@ -62,6 +84,9 @@ export class CubeScene {
     this.camera.lookAt(0, 0, 0);
     this.scene.add(this.root);
     for (const arrow of this.arrows) this.root.add(arrow.object);
+    this.pointerLayer.add(...this.pointers.map((p) => p.object));
+    this.root.add(this.pointerLayer);
+    if (!spin) this.listenDrag();
     this.buildCube();
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
@@ -98,6 +123,50 @@ export class CubeScene {
     }
   }
 
+  // 큐브를 손가락(마우스)으로 끌어 돌려 볼 수 있게 한다. 손을 떼면 처음 위치로 돌아온다.
+  private listenDrag(): void {
+    const canvas = this.renderer.domElement;
+    canvas.style.touchAction = 'none';
+    canvas.style.cursor = 'grab';
+    canvas.addEventListener('pointerdown', this.onDown);
+    canvas.addEventListener('pointermove', this.onMove);
+    canvas.addEventListener('pointerup', this.onUp);
+    canvas.addEventListener('pointercancel', this.onUp);
+  }
+
+  private onDown = (e: PointerEvent): void => {
+    this.drag.active = true;
+    this.drag.x = e.clientX;
+    this.drag.y = e.clientY;
+    this.renderer.domElement.setPointerCapture(e.pointerId);
+  };
+
+  private onMove = (e: PointerEvent): void => {
+    if (!this.drag.active) return;
+    this.drag.yaw += (e.clientX - this.drag.x) * 0.012;
+    this.drag.pitch = Math.max(-1.4, Math.min(1.4, this.drag.pitch + (e.clientY - this.drag.y) * 0.012));
+    this.drag.x = e.clientX;
+    this.drag.y = e.clientY;
+  };
+
+  private onUp = (): void => {
+    this.drag.active = false;
+  };
+
+  // 매 프레임: 돌려 본 만큼 큐브를 기울이고, 손을 떼면 부드럽게 처음 위치로 되돌린다
+  private applyDrag(): void {
+    const d = this.drag;
+    if (!d.active) {
+      // 가장 가까운 정면(한 바퀴 돌았으면 그만큼 덜 돌려서)으로 돌아간다
+      d.yaw -= Math.round(d.yaw / (Math.PI * 2)) * Math.PI * 2;
+      d.yaw *= 0.86;
+      d.pitch *= 0.86;
+      if (Math.abs(d.yaw) < 0.002 && Math.abs(d.pitch) < 0.002) d.yaw = d.pitch = 0;
+    }
+    this.root.rotation.set(d.pitch, d.yaw, 0, 'YXZ');
+    this.pointerLayer.visible = Math.abs(d.yaw) + Math.abs(d.pitch) < 0.06;
+  }
+
   // 영역 크기에 맞춰 화면 크기를 다시 맞춘다
   private resize(): void {
     const { clientWidth: w, clientHeight: h } = this.container;
@@ -118,11 +187,56 @@ export class CubeScene {
   // 화살표를 모두 숨긴다
   private hideArrows(): void {
     for (const arrow of this.arrows) arrow.hide();
+    for (const pointer of this.pointers) pointer.hide();
+  }
+
+  // 매 프레임: 들어갈 자리 칸들을 원래 색과 분홍색 사이로 깜빡이게 한다
+  private animatePulse(now: number): void {
+    if (!this.pulse) return;
+    const mix = 0.7 + 0.25 * Math.sin(now / 260);
+    this.pulse.cells.forEach((cell, k) => this.stickers[cell].material.color.copy(this.pulse!.colors[k]).lerp(SLOT_COLOR, mix));
+  }
+
+  // 화살표 이름표 글자를 정한다
+  setLabels(labels: PointerLabels): void {
+    this.labels = labels;
+  }
+
+  // 조각(칸 묶음)이 눈에 보이는 면을 향하는지에 따라, 가리킬 겉면의 점과 바깥쪽 방향을 구한다
+  private surfaceOf(cells: number[]): { target: Vec3; out: Vec3 } {
+    const normals = cells.map((i) => FACELETS[i].normal);
+    const seen = normals.filter((n) => VIEW_DIRECTION.dot(new THREE.Vector3(...n)) > 0);
+    const out = (seen.length ? seen : normals).reduce<Vec3>((sum, n) => [sum[0] + n[0], sum[1] + n[1], sum[2] + n[2]], [0, 0, 0]);
+    const len = Math.hypot(...out);
+    const pos = FACELETS[cells[0]].pos;
+    return { target: [pos[0] + (out[0] / len) * 0.5, pos[1] + (out[1] / len) * 0.5, pos[2] + (out[2] / len) * 0.5], out };
+  }
+
+  // 칸 묶음을 가리키는 화살표를 하나 띄운다
+  private pointAt(index: number, cells: number[], tone: 'piece' | 'slot'): void {
+    const base = this.labels[tone];
+    if (!base) return;
+    // 눈에 보이는 칸이 하나도 없으면 큐브 밖에서 화살표만 보여준다 (큐브를 돌려서 찾아볼 수 있으므로)
+    const hidden = cells.every((i) => VIEW_DIRECTION.dot(new THREE.Vector3(...FACELETS[i].normal)) <= 0);
+    const { target, out } = this.surfaceOf(cells);
+    // 눈에 보이는 칸이 없으면 큐브 밖에서, 보이면 그 칸 바로 앞에서 가리킨다
+    if (hidden) this.pointers[index].showOutside(target, out, '', tone);
+    else this.pointers[index].show(target, out, base, tone);
+  }
+
+  // 찾을 조각과 들어갈 자리를 표시한다 (둘 다 화살표와 이름표, 자리는 칸 색이 분홍색으로 깜빡임)
+  private showMarks(marks: Marks | null | undefined): void {
+    if (marks?.piece?.length) this.pointAt(0, marks.piece, 'piece');
+    if (marks?.slot?.length) {
+      this.pulse = { cells: marks.slot, colors: marks.slot.map((i) => this.stickers[i].material.color.clone()) };
+      this.pointAt(1, marks.slot, 'slot');
+    }
   }
 
   // 스티커 색을 칠하고 조각을 제자리에 둔다. focus가 있으면 그 면의 줄만, highlight가 있으면 그 칸들만
   // 선명하게 칠하고 나머지는 흐리게 칠한다.
   private paint(state: string, focus?: Face | null, highlight?: number[] | null): void {
+    this.pulse = null;
     for (const [cubie, home] of this.homes) {
       cubie.position.copy(home);
       cubie.quaternion.identity();
@@ -140,9 +254,10 @@ export class CubeScene {
   }
 
   // 큐브를 주어진 상태(54칸 문자열)의 색으로 즉시 표시한다. highlight를 주면 그 칸들만 선명하게 보인다.
-  setState(state: string, highlight?: number[] | null): void {
+  setState(state: string, highlight?: number[] | null, marks?: Marks | null): void {
     this.cancelAnimation();
     this.paint(state, null, highlight);
+    this.showMarks(marks);
   }
 
   // 회전 하나를 보여준다: 돌릴 줄을 강조하고 화살표를 띄운 뒤, 천천히 돌린다.
@@ -181,7 +296,10 @@ export class CubeScene {
   private tick(now: number): void {
     this.frameId = requestAnimationFrame(this.tick);
     if (this.spin) this.root.rotation.y = now / 1400;
+    else this.applyDrag();
     for (const arrow of this.arrows) arrow.animate(now);
+    for (const pointer of this.pointers) pointer.animate(now, this.camera);
+    this.animatePulse(now);
     const anim = this.animation;
     if (anim) {
       const t = Math.min(1, Math.max(0, (now - anim.start) / anim.duration));
@@ -205,6 +323,11 @@ export class CubeScene {
     cancelAnimationFrame(this.frameId);
     this.cancelAnimation();
     this.resizeObserver.disconnect();
+    const canvas = this.renderer.domElement;
+    canvas.removeEventListener('pointerdown', this.onDown);
+    canvas.removeEventListener('pointermove', this.onMove);
+    canvas.removeEventListener('pointerup', this.onUp);
+    canvas.removeEventListener('pointercancel', this.onUp);
     this.renderer.dispose();
     this.renderer.domElement.remove();
   }
