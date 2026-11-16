@@ -3,7 +3,7 @@ import { FACES, SOLVED } from '../src/core/faces';
 import { applyMoves } from '../src/core/moves';
 import { randomMoves } from '../src/core/scramble';
 import { countProblems } from '../src/core/validate';
-import { AutoCapture, CAPTURE_SETTINGS, cubeColorOf, hueGap } from '../src/scanner/autoCapture';
+import { AutoCapture, CAPTURE_SETTINGS, cubeColorOf, findDuplicate } from '../src/scanner/autoCapture';
 import { analyzeFrame } from '../src/scanner/frame';
 import type { RGB } from '../src/scanner/colorMath';
 import { resolveCube, rotateGrid } from '../src/scanner/orient';
@@ -69,9 +69,13 @@ function fakeImage(colors: RGB[], gap: number, offset = 0): number[] {
   return data;
 }
 const faceColors = (center: RGB) => Array.from({ length: 9 }, (_, i) => (i === 4 ? center : i % 2 ? BASE.B : BASE.U));
-const cubeFrame = (center: RGB, offset = 0) => analyzeFrame(fakeImage(faceColors(center), 3, offset), 150);
-const run = (auto: AutoCapture, frame: ReturnType<typeof cubeFrame>, times: number, centers: RGB[] = []) =>
-  Array.from({ length: times }, () => auto.update(frame, centers).status);
+const solidFace = (color: RGB) => Array<RGB>(9).fill(color);
+const frameOf = (colors: RGB[], gap: number, offset = 0) => analyzeFrame(fakeImage(colors, gap, offset), 150);
+const cubeFrame = (center: RGB, offset = 0) => frameOf(faceColors(center), 3, offset);
+// 같은 화면을 times번 연속으로 읽힌 것처럼 판단시킨다
+const run = (auto: AutoCapture, frame: ReturnType<typeof cubeFrame>, times: number, captured: RGB[][] = []) =>
+  Array.from({ length: times }, () => auto.update(frame, captured).status);
+const cellsOf = (frame: ReturnType<typeof cubeFrame>) => frame.cells.map((c) => c.rgb);
 
 describe('자동 촬영 판단', () => {
   it('큐브 색 알아보기: 여섯 색은 맞히고 회색·베이지·살색·검정은 거른다', () => {
@@ -85,38 +89,91 @@ describe('자동 촬영 판단', () => {
     expect(statuses.slice(0, -1).every((s) => s === 'holding')).toBe(true);
     expect(statuses[statuses.length - 1]).toBe('capture');
   });
-  it('큐브가 조금 어긋나 있어도(칸의 10%) 알아본다', () => {
-    expect(run(new AutoCapture(), cubeFrame(BASE.F, 5), 3)).toEqual(['holding', 'holding', 'holding']);
-  });
-  it('틈이 없는 평평한 배경(벽·책상·종이)은 색이 큐브 같아도 찍지 않는다', () => {
-    for (const wall of [BASE.U, BASE.D, BASE.L]) {
-      const flat = analyzeFrame(fakeImage(Array(9).fill(wall), 0), 150);
-      expect(run(new AutoCapture(), flat, 20).every((s) => s === 'unclear')).toBe(true);
+  it('여러 색이 섞인 면은 칸 사이 틈이 흐리게 보이거나 어긋나 있어도 찍는다', () => {
+    for (const gap of [0, 1]) {
+      const statuses = run(new AutoCapture(), frameOf(faceColors(BASE.F), gap, 5), CAPTURE_SETTINGS.stableTicks + 1);
+      expect(statuses).toContain('capture');
     }
-    const blocks = analyzeFrame(fakeImage(faceColors(BASE.F), 0), 150);
-    expect(run(new AutoCapture(), blocks, 20).every((s) => s === 'unclear')).toBe(true);
+  });
+  it('손이 떨려서 가끔 화면이 크게 변해도 곧 찍는다 (한 번 흔들렸다고 처음부터 다시 세지 않는다)', () => {
+    const auto = new AutoCapture();
+    const steady = cubeFrame(BASE.F);
+    const shaken = analyzeFrame(fakeImage(faceColors(BASE.F).map((c) => c.map((v) => Math.min(255, v + 60)) as RGB), 3), 150);
+    const statuses: string[] = [];
+    for (let i = 0; i < 14; i++) statuses.push(auto.update(i === 3 ? shaken : steady, []).status);
+    expect(statuses).toContain('capture');
+  });
+  it('색이 한 가지뿐인 평평한 배경(벽·책상·종이)은 찍지 않는다', () => {
+    for (const wall of [BASE.U, BASE.D, BASE.L]) {
+      const statuses = run(new AutoCapture(), frameOf(solidFace(wall), 0), 20);
+      expect(statuses.every((s) => s === 'unaligned')).toBe(true);
+    }
+  });
+  it('완성된 큐브(한 가지 색) 면은 틈이 보일 때만 찍는다', () => {
+    expect(run(new AutoCapture(), frameOf(solidFace(BASE.R), 3), CAPTURE_SETTINGS.stableTicks + 1)).toContain('capture');
+    expect(run(new AutoCapture(), frameOf(solidFace(BASE.R), 0), 20)).not.toContain('capture');
   });
   it('큐브 색이 아닌 칸이 하나라도 있으면 찍지 않는다 (손가락이 가린 경우 등)', () => {
     const colors = faceColors(BASE.F);
     colors[0] = [224, 172, 140];
-    const frame = analyzeFrame(fakeImage(colors, 3), 150);
-    const result = new AutoCapture().update(frame, []);
+    const result = new AutoCapture().update(frameOf(colors, 3), []);
     expect(result.status).toBe('unclear');
     expect(result.colors[0]).toBeNull();
     expect(result.colors[4]).toBe('F');
   });
-  it('한 면을 찍은 뒤에는 큐브를 움직여야 다음 면을 찍는다', () => {
+});
+
+// 가운데 색은 center, 주변 칸은 면마다 다른 무늬인 한 면 (진짜 큐브의 서로 다른 면처럼)
+const surround = (center: RGB, k: number): RGB[] =>
+  Array.from({ length: 9 }, (_, i) => (i === 4 ? center : BASE[FACES[(k + i * 2 + (i % 3)) % 6]]));
+
+describe('같은 면 중복 촬영 방지', () => {
+  const faceF = cellsOf(cubeFrame(BASE.F));
+  it('이미 찍은 면(가운데 색이 같은 면)은 몇 번을 보여줘도 다시 찍지 않는다', () => {
     const auto = new AutoCapture();
-    run(auto, cubeFrame(BASE.F), CAPTURE_SETTINGS.stableTicks + 1);
-    expect(run(auto, cubeFrame(BASE.R), 15).every((s) => s === 'seen')).toBe(true);
-    auto.update(analyzeFrame(fakeImage(Array(9).fill([40, 40, 40] as RGB), 0), 150), [BASE.F]);
-    const next = run(auto, cubeFrame(BASE.R), CAPTURE_SETTINGS.stableTicks + 1, [BASE.F]);
-    expect(next[next.length - 1]).toBe('capture');
+    const statuses = run(auto, cubeFrame(BASE.F), 30, [faceF]);
+    expect(statuses.every((s) => s === 'seen')).toBe(true);
+    expect(auto.update(cubeFrame(BASE.F), [faceF]).duplicateOf).toBe(0);
   });
-  it('이미 찍은 면은 다시 찍지 않고, 비슷한 색(빨강/주황, 흰색/노랑)은 다른 면으로 본다', () => {
-    expect(run(new AutoCapture(), cubeFrame(BASE.F), 12, [BASE.F.map((v) => v * 0.8) as RGB]).every((s) => s === 'seen')).toBe(true);
-    expect(hueGap(BASE.R, BASE.L)).toBeGreaterThan(30);
-    expect(hueGap(BASE.U, BASE.D)).toBeGreaterThan(30);
-    expect(new AutoCapture().update(cubeFrame(BASE.L), [BASE.R]).status).toBe('holding');
+  it('찍은 직후에 같은 면이 계속 보여도 두 번째 촬영은 없다', () => {
+    const auto = new AutoCapture();
+    const captured: RGB[][] = [];
+    let shots = 0;
+    for (let i = 0; i < 40; i++) {
+      const result = auto.update(cubeFrame(BASE.F), captured);
+      if (result.status === 'capture') {
+        shots++;
+        captured.push(cellsOf(cubeFrame(BASE.F)));
+      }
+    }
+    expect(shots).toBe(1);
+  });
+  it('조명 때문에 가운데 색을 다르게 읽어도, 모양이 같으면 같은 면으로 본다 (큐브를 돌려도 마찬가지)', () => {
+    const warm = faceF.map((rgb, i) => (i === 4 ? ([240, 225, 40] as RGB) : rgb)); // 가운데가 노랑처럼 보임
+    expect(cubeColorOf(warm[4])).toBe('D');
+    for (let turns = 0; turns < 4; turns++) {
+      const turned = rotateGrid(faceF, turns);
+      expect(findDuplicate(turned.map((c) => c.map((v) => v * 0.8) as RGB), [faceF])).toBe(0);
+    }
+  });
+  it('다른 면은 중복으로 보지 않고, 빨강/주황·흰색/노랑 면도 구분한다', () => {
+    expect(findDuplicate(cellsOf(frameOf(surround(BASE.R, 2), 3)), [faceF])).toBe(-1);
+    expect(findDuplicate(solidFace(BASE.L), [solidFace(BASE.R)])).toBe(-1);
+    expect(findDuplicate(solidFace(BASE.U), [solidFace(BASE.D)])).toBe(-1);
+    expect(new AutoCapture().update(frameOf(surround(BASE.L, 2), 3), [cellsOf(frameOf(surround(BASE.R, 3), 3))]).status).toBe('holding');
+  });
+  it('여섯 면을 차례로 보여주면 딱 여섯 번만 찍힌다', () => {
+    const auto = new AutoCapture();
+    const captured: RGB[][] = [];
+    const centers = [BASE.F, BASE.R, BASE.D, BASE.L, BASE.B, BASE.U];
+    for (const center of centers) {
+      // 면 하나를 25번(약 3초) 보여준다. 마지막 면 말고는 이후에 다음 면이 이어진다
+      for (let i = 0; i < 25; i++) {
+        const frame = frameOf(surround(center, centers.indexOf(center)), 3);
+        if (auto.update(frame, captured).status === 'capture') captured.push(cellsOf(frame));
+      }
+    }
+    expect(captured.length).toBe(6);
+    expect(new Set(captured.map((f) => cubeColorOf(f[4]))).size).toBe(captured.length);
   });
 });

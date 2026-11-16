@@ -1,15 +1,18 @@
-// 카메라 스캔 화면: 큐브를 돌려 가며 보여주면 한 면씩 저절로 찍는다 (순서·방향 무관)
+// 카메라 스캔 화면: 큐브를 돌려 가며 보여주면 한 면씩 저절로 찍는다 (순서·방향 무관, 같은 면은 한 번만)
 import { useEffect, useRef, useState } from 'react';
 import { FACE_COLORS, type Face } from '../../core/faces';
 import { useI18n, type MessageKey } from '../../i18n';
-import { AutoCapture, type CaptureStatus } from '../../scanner/autoCapture';
-import { rgbToCss, type RGB } from '../../scanner/colorMath';
+import { AutoCapture, cubeColorOf, findDuplicate, type CaptureStatus } from '../../scanner/autoCapture';
+import type { RGB } from '../../scanner/colorMath';
 import { resolveCube } from '../../scanner/orient';
 import { sampleFrame, useCamera } from '../../scanner/useCamera';
 import { Bubble } from '../../widgets/Bubble';
+import { CaptureSlots } from './CaptureSlots';
 
 /** 화면을 읽는 간격(ms) */
 const TICK = 130;
+/** 안내 문구(직접 찍기 결과 등)를 보여주는 시간(ms) */
+const NOTICE_MS = 2200;
 
 interface Props {
   /** 6면을 다 찍으면 복원한 큐브 상태와, 확실히 복원됐는지를 넘긴다 */
@@ -18,6 +21,8 @@ interface Props {
   onBack: () => void;
 }
 
+type Phase = CaptureStatus | 'captured';
+
 // 자동 촬영을 진행하고, 6면이 모이면 큐브 상태를 복원해 넘겨준다
 export function ScanScreen({ onComplete, onManual, onBack }: Props) {
   const { t } = useI18n();
@@ -25,10 +30,15 @@ export function ScanScreen({ onComplete, onManual, onBack }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const detector = useRef(new AutoCapture());
   const capturedRef = useRef<RGB[][]>([]);
+  const noticeTimer = useRef<number>();
+  const noticeUntil = useRef(0);
   const [captured, setCaptured] = useState<RGB[][]>([]);
-  const [phase, setPhase] = useState<CaptureStatus | 'captured'>('unclear');
+  const [phase, setPhase] = useState<Phase>('unclear');
   const [progress, setProgress] = useState(0);
   const [seen, setSeen] = useState<(Face | null)[]>([]);
+  const [lastFace, setLastFace] = useState<Face | null>(null);
+  const [dupFace, setDupFace] = useState<Face | null>(null);
+  const [notice, setNotice] = useState<{ key: MessageKey; face: Face | null } | null>(null);
   const [flash, setFlash] = useState(0);
 
   // 찍은 면 목록을 바꾼다 (화면 표시용 상태와 판단용 참조를 함께 갱신)
@@ -37,10 +47,22 @@ export function ScanScreen({ onComplete, onManual, onBack }: Props) {
     setCaptured(next);
   }
 
+  // 잠깐 보여줄 안내 문구를 띄운다
+  function showNotice(key: MessageKey, face: Face | null = null) {
+    setNotice({ key, face });
+    setDupFace(face);
+    noticeUntil.current = Date.now() + NOTICE_MS;
+    window.clearTimeout(noticeTimer.current);
+    noticeTimer.current = window.setTimeout(() => setNotice(null), NOTICE_MS);
+  }
+
   // 한 면을 추가하고, 6면이 모이면 큐브 상태를 복원해 넘긴다
   function addFace(colors: RGB[]) {
     const next = [...capturedRef.current, colors];
     store(next);
+    setLastFace(cubeColorOf(colors[4]));
+    setDupFace(null);
+    setNotice(null);
     setFlash((n) => n + 1);
     setPhase('captured');
     navigator.vibrate?.(60);
@@ -57,9 +79,11 @@ export function ScanScreen({ onComplete, onManual, onBack }: Props) {
       if (!videoRef.current || !canvasRef.current || capturedRef.current.length >= 6) return;
       const frame = sampleFrame(videoRef.current, canvasRef.current);
       if (!frame) return;
-      const result = detector.current.update(frame, capturedRef.current.map((face) => face[4]));
+      const result = detector.current.update(frame, capturedRef.current);
       setProgress(result.progress);
       setSeen(result.colors);
+      if (result.duplicateOf >= 0) setDupFace(cubeColorOf(capturedRef.current[result.duplicateOf][4]));
+      else if (Date.now() > noticeUntil.current) setDupFace(null);
       if (result.status === 'capture') {
         addFace(frame.cells.map((c) => c.rgb));
         return;
@@ -71,26 +95,43 @@ export function ScanScreen({ onComplete, onManual, onBack }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, videoRef]);
 
-  // 자동으로 안 찍힐 때: 지금 보이는 화면을 그대로 한 면으로 찍는다
+  // 자동으로 안 찍힐 때: 지금 보이는 화면을 한 면으로 찍는다 (가운데 색이 불분명하거나 이미 찍은 면이면 막는다)
   function captureNow() {
     const frame = videoRef.current && canvasRef.current && sampleFrame(videoRef.current, canvasRef.current);
-    if (frame) addFace(frame.cells.map((c) => c.rgb));
+    if (!frame) return;
+    const face = frame.cells.map((c) => c.rgb);
+    if (!cubeColorOf(face[4])) return showNotice('scanNoCenter');
+    const duplicate = findDuplicate(face, capturedRef.current);
+    if (duplicate >= 0) return showNotice('scanSeen', cubeColorOf(capturedRef.current[duplicate][4]));
+    addFace(face);
   }
 
-  // 방금 찍은 면을 지운다
-  function undo() {
-    store(capturedRef.current.slice(0, -1));
+  // 찍은 면 하나를 지우고 다시 찍을 수 있게 한다
+  function removeFace(index: number) {
+    store(capturedRef.current.filter((_, i) => i !== index));
     detector.current.reset();
     setPhase('unclear');
+    setLastFace(null);
+    setDupFace(null);
   }
 
-  const messageKey: Record<typeof phase, MessageKey> = {
+  const messageKey: Record<Phase, MessageKey> = {
     unclear: 'scanIntro',
+    unaligned: 'scanAlign',
     holding: 'scanHolding',
     seen: 'scanSeen',
     captured: 'scanCaptured',
     capture: 'scanCaptured',
   };
+  const colorOf = (face: Face | null) => (face ? t(('color' + face) as MessageKey) : '');
+  const shownFace = notice ? notice.face : phase === 'captured' ? lastFace : phase === 'seen' ? dupFace : null;
+  const text = t(notice?.key ?? messageKey[phase], { color: colorOf(shownFace), n: 6 - captured.length });
+  const centerFace = seen[4] ?? null;
+  const chip =
+    phase === 'seen' && dupFace ? t('scanChipSeen', { color: colorOf(dupFace) })
+    : phase === 'holding' && centerFace ? t('scanChipHolding', { color: colorOf(centerFace) })
+    : null;
+  const gridClass = phase === 'seen' ? ' dup' : phase === 'holding' || phase === 'captured' ? ' holding' : '';
 
   return (
     <main className="screen scan">
@@ -102,11 +143,12 @@ export function ScanScreen({ onComplete, onManual, onBack }: Props) {
 
       <div className="camera">
         <video ref={videoRef} playsInline muted />
-        <div className={'scan-grid' + (phase === 'holding' || phase === 'seen' || phase === 'captured' ? ' holding' : '')}>
+        <div className={'scan-grid' + gridClass}>
           {Array.from({ length: 9 }, (_, i) => (
             <span key={i}>{seen[i] && <i style={{ background: FACE_COLORS[seen[i]!] }} />}</span>
           ))}
         </div>
+        {chip && <div className={'camera-chip' + (phase === 'seen' ? ' dup' : '')}>{chip}</div>}
         <div className="hold-bar"><i style={{ width: `${progress * 100}%` }} /></div>
         {flash > 0 && <div key={flash} className="flash" />}
         {status !== 'ready' && (
@@ -119,19 +161,13 @@ export function ScanScreen({ onComplete, onManual, onBack }: Props) {
         <button className="btn primary big" onClick={onManual}>🎨 {t('manualStart')}</button>
       ) : (
         <>
-          <Bubble tone={phase === 'captured' || phase === 'holding' ? 'good' : 'normal'}>{t(messageKey[phase])}</Bubble>
-          <div className="scan-slots">
-            {Array.from({ length: 6 }, (_, slot) => (
-              <div key={slot} className={'scan-slot' + (captured[slot] ? ' filled' : '')}>
-                {(captured[slot] ?? Array(9).fill(null)).map((rgb: RGB | null, i: number) => (
-                  <i key={i} style={rgb ? { background: rgbToCss(rgb) } : undefined} />
-                ))}
-              </div>
-            ))}
-          </div>
+          <Bubble tone={phase === 'captured' || phase === 'holding' ? 'good' : phase === 'seen' || notice ? 'warn' : 'normal'}>
+            {text}
+          </Bubble>
+          <CaptureSlots captured={captured} highlight={dupFace} onRemove={removeFace} />
           <div className="row">
             <button className="btn small" disabled={status !== 'ready'} onClick={captureNow}>📸 {t('scanManual')}</button>
-            <button className="btn small" disabled={!captured.length} onClick={undo}>{t('scanUndo')}</button>
+            <button className="btn small" disabled={!captured.length} onClick={() => removeFace(captured.length - 1)}>{t('scanUndo')}</button>
           </div>
           <p className="hint">💡 {t('scanTip')}</p>
         </>

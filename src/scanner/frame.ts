@@ -15,7 +15,7 @@ export interface FrameSample {
 }
 
 /** 경계선을 찾을 때 좌우(상하)로 살피는 범위: 칸 크기의 이 비율만큼 */
-const SEAM_BAND = 0.16;
+const SEAM_BAND = 0.25;
 
 // 픽셀의 밝기를 구한다
 function luminance(r: number, g: number, b: number): number {

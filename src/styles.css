@@ -96,15 +96,25 @@ button:focus-visible { outline: 4px solid #2f6bff; outline-offset: 2px; }
 .scan-grid span { border: 1.5px solid rgba(255, 255, 255, 0.6); display: grid; place-items: start end; padding: 5px; }
 .scan-grid span i { width: 16px; height: 16px; border-radius: 50%; border: 2.5px solid #fff; box-shadow: 0 0 0 1.5px var(--ink); }
 .scan-grid.holding { border-color: #5df08a; }
+.scan-grid.dup { border-color: var(--orange); }
+.camera-chip { position: absolute; top: 4%; left: 50%; transform: translateX(-50%); padding: 6px 14px; border: 3px solid var(--ink); border-radius: 999px; background: #5df08a; font: 400 16px var(--display); white-space: nowrap; box-shadow: 0 3px 0 var(--ink); }
+.camera-chip.dup { background: var(--orange); }
 .hold-bar { position: absolute; left: 14%; right: 14%; bottom: 5%; height: 12px; border-radius: 999px; background: rgba(255, 255, 255, 0.3); overflow: hidden; }
 .hold-bar i { display: block; height: 100%; background: #5df08a; transition: width 0.12s linear; }
 .flash { position: absolute; inset: 0; background: #fff; animation: flash 0.45s ease-out forwards; pointer-events: none; }
 @keyframes flash { from { opacity: 0.9; } to { opacity: 0; } }
 .camera-msg { position: absolute; inset: 0; display: grid; place-items: center; padding: 28px; text-align: center; font-size: 17px; line-height: 1.6; color: #fff; background: rgba(13, 18, 32, 0.9); }
-.scan-slots { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
-.scan-slot { aspect-ratio: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 3px; border: 3px dashed var(--muted); border-radius: 12px; }
-.scan-slot.filled { border: 3px solid var(--ink); background: var(--ink); animation: pop 0.3s ease-out; }
-.scan-slot i { border-radius: 3px; }
+.scan-slots { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.scan-slot { position: relative; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 0; border: 0; background: none; font-family: inherit; color: var(--ink); cursor: default; }
+.scan-slot .thumb { width: 100%; aspect-ratio: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 3px; border: 3px dashed var(--face); border-radius: 12px; place-items: stretch; }
+.scan-slot .thumb b { grid-column: 1 / -1; grid-row: 1 / -1; place-self: center; width: 40%; aspect-ratio: 1; border-radius: 50%; background: var(--face); opacity: 0.45; }
+.scan-slot.filled { cursor: pointer; }
+.scan-slot.filled .thumb { border: 3px solid var(--ink); background: var(--ink); animation: pop 0.3s ease-out; }
+.scan-slot.dup .thumb { border-color: var(--orange); animation: shake 0.4s ease-in-out 2; }
+.scan-slot em { position: absolute; top: -6px; right: -4px; width: 22px; height: 22px; display: grid; place-items: center; border: 2.5px solid var(--ink); border-radius: 50%; background: #5df08a; font: normal 800 12px var(--body, inherit); }
+.scan-slot small { font-size: 12px; font-weight: 700; }
+.scan-slot .thumb i { border-radius: 3px; }
+@keyframes shake { 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
 @keyframes pop { from { transform: scale(0.6); } 70% { transform: scale(1.12); } }
 
 /* 색 칠하기: 면 넘기기 */
@@ -171,6 +181,6 @@ button:focus-visible { outline: 4px solid #2f6bff; outline-offset: 2px; }
 @keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero .mascot, .confetti i, .face-cell.marked, .scan-slot.filled { animation: none; }
+  .hero .mascot, .confetti i, .face-cell.marked, .scan-slot.filled .thumb, .scan-slot.dup .thumb { animation: none; }
   .confetti { display: none; }
 }
