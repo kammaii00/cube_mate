@@ -63,6 +63,12 @@ function keyOf(pos: number[]): number | string {
 
 // 추적 스티커들을 목표로 보내는 가장 짧은 공식 조합을 찾아 회전 목록으로 돌려준다 (없으면 null)
 export function search(tracked: Tracked[], macros: Macro[], maxDepth = 10): Move[] | null {
+  const path = searchPath(tracked, macros, maxDepth);
+  return path && path.flatMap((m) => macros[m].moves);
+}
+
+// 위와 같되, 어떤 공식을 어떤 순서로 썼는지(공식 번호 목록)를 돌려준다
+export function searchPath(tracked: Tracked[], macros: Macro[], maxDepth = 10): number[] | null {
   const start = tracked.map((t) => t.cur);
   const size = start.length;
   const nodes: number[][] = [start];
@@ -74,9 +80,9 @@ export function search(tracked: Tracked[], macros: Macro[], maxDepth = 10): Move
   for (let head = 0; head < nodes.length; head++) {
     const pos = nodes[head];
     if (reached(pos, tracked)) {
-      const moves: Move[] = [];
-      for (let n = head; parent[n] >= 0; n = parent[n]) moves.unshift(...macros[via[n]].moves);
-      return moves;
+      const path: number[] = [];
+      for (let n = head; parent[n] >= 0; n = parent[n]) path.unshift(via[n]);
+      return path;
     }
     if (depth[head] >= maxDepth) continue;
     for (let m = 0; m < macros.length; m++) {

@@ -2,14 +2,15 @@
 import { SOLVED } from '../core/faces';
 import { applyMoves, isSolved, parseAlg, type Move } from '../core/moves';
 import type { BeginnerSolution } from './beginner';
+import type { Mission } from './beginner/lesson';
 
 /** 풀이 안내 화면에 넘기는 풀이 결과 */
 export interface Solution {
   /** 안내를 시작할 때의 큐브 상태 */
   start: string;
   moves: Move[];
-  /** 배우며 풀기일 때만: 각 회전이 속한 단계 번호 (0~6) */
-  stages: number[] | null;
+  /** 배우며 풀기일 때만: 수업 계획(조각 하나를 맞추는 미션들) */
+  missions: Mission[] | null;
 }
 
 let worker: Worker | null = null;
@@ -49,12 +50,12 @@ export function warmUpSolver(): void {
 export async function solveFast(facelets: string): Promise<Solution> {
   const moves = parseAlg(await request<string>('solve', facelets));
   if (applyMoves(facelets, moves) !== SOLVED) throw new Error('풀이 검증 실패');
-  return { start: facelets, moves, stages: null };
+  return { start: facelets, moves, missions: null };
 }
 
 // 배우며 풀기(초보자 공식) 풀이를 계산하고 완성에 도달하는지 확인한다
 export async function solveLearn(facelets: string): Promise<Solution> {
   const result = await request<BeginnerSolution>('learn', facelets);
   if (!isSolved(applyMoves(result.start, result.moves))) throw new Error('풀이 검증 실패');
-  return result;
+  return { start: result.start, moves: result.moves, missions: result.missions };
 }

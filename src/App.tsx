@@ -1,10 +1,12 @@
 // 앱의 최상위: 어떤 화면을 보여줄지와 화면 사이에 넘길 데이터를 관리한다
 import { useEffect, useState } from 'react';
 import { SOLVED, emptyState } from './core/faces';
-import { flipUpsideDown } from './core/moves';
+import { applyMoves } from './core/moves';
 import { DoneScreen } from './features/done/DoneScreen';
 import { EditScreen } from './features/edit/EditScreen';
 import { GuideScreen } from './features/guide/GuideScreen';
+import { LearnScreen } from './features/learn/LearnScreen';
+import { formulaUse } from './features/learn/frames';
 import { HomeScreen } from './features/home/HomeScreen';
 import { ScanScreen } from './features/scan/ScanScreen';
 import { warmUpSolver, type Solution } from './solver/solverClient';
@@ -16,7 +18,7 @@ export function App() {
   const [screen, setScreen] = useState<Screen>('home');
   const [cubeState, setCubeState] = useState(emptyState);
   const [source, setSource] = useState<'manual' | 'scan' | 'scanUnsure'>('manual');
-  const [solution, setSolution] = useState<Solution>({ start: emptyState(), moves: [], stages: null });
+  const [solution, setSolution] = useState<Solution>({ start: emptyState(), moves: [], missions: null });
 
   // 앱이 열리면 풀이 엔진 준비를 미리 시작한다
   useEffect(() => warmUpSolver(), []);
@@ -52,6 +54,9 @@ export function App() {
         />
       );
     case 'guide':
+      if (solution.missions) {
+        return <LearnScreen solution={solution} onDone={() => setScreen('done')} onBack={() => setScreen('edit')} />;
+      }
       return (
         <GuideScreen
           solution={solution}
@@ -62,7 +67,8 @@ export function App() {
     case 'done':
       return (
         <DoneScreen
-          state={solution.stages ? flipUpsideDown(SOLVED) : SOLVED}
+          state={solution.missions ? applyMoves(solution.start, solution.moves) : SOLVED}
+          formulas={solution.missions ? formulaUse(solution.missions) : null}
           moveCount={solution.moves.length}
           onRestart={() => setScreen('home')}
         />

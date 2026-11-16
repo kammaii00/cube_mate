@@ -2,12 +2,14 @@
 // 시점은 항상 고정(위·앞·오른쪽이 보임)이라, 아이들이 손에 든 큐브와 그대로 비교할 수 있다.
 import * as THREE from 'three';
 import { FACELETS, FACE_COLORS, FACE_NORMALS, type Face } from '../core/faces';
-import { applyMove, parseMove, type Move } from '../core/moves';
+import { applyMove, parseMove, wholeTurns, type Move } from '../core/moves';
 import { MoveArrow } from './arrow';
 
 const UNSET_COLOR = '#b9c4d6';
 /** 돌리지 않는 조각을 흐리게 만들 때 섞는 색 */
 const FADE_COLOR = new THREE.Color('#dfe9f5');
+/** 특정 칸만 보여줄 때 나머지 칸에 섞는 색 (흰색 칸과도 구분되도록 어둡게) */
+const DIM_COLOR = new THREE.Color('#8a94ad');
 const VIEW_POSITION = new THREE.Vector3(0.62, 0.55, 0.9).normalize().multiplyScalar(8.6);
 /** 화살표만 먼저 보여주고 회전을 시작하기까지 기다리는 시간(ms) */
 const LEAD_TIME = 800;
@@ -45,7 +47,8 @@ export class CubeScene {
   private root = new THREE.Group();
   private homes = new Map<THREE.Group, THREE.Vector3>();
   private stickers: THREE.Mesh<THREE.ShapeGeometry, THREE.MeshBasicMaterial>[] = [];
-  private arrow = new MoveArrow();
+  /** 화살표 3개: 보통은 첫 번째만 쓰고, 큐브를 통째로 돌릴 때는 세 줄 모두에 띄운다 */
+  private arrows = [new MoveArrow(), new MoveArrow(), new MoveArrow()];
   private animation: Animation | null = null;
   private frameId = 0;
   private resizeObserver: ResizeObserver;
@@ -58,7 +61,7 @@ export class CubeScene {
     this.camera.position.copy(VIEW_POSITION);
     this.camera.lookAt(0, 0, 0);
     this.scene.add(this.root);
-    this.root.add(this.arrow.object);
+    for (const arrow of this.arrows) this.root.add(arrow.object);
     this.buildCube();
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
@@ -108,12 +111,18 @@ export class CubeScene {
   private cancelAnimation(): void {
     const anim = this.animation;
     this.animation = null;
-    this.arrow.hide();
+    this.hideArrows();
     anim?.resolve();
   }
 
-  // 스티커 색을 칠하고 조각을 제자리에 둔다. focus가 있으면 그 면의 줄만 선명하게, 나머지는 흐리게 칠한다.
-  private paint(state: string, focus?: Face): void {
+  // 화살표를 모두 숨긴다
+  private hideArrows(): void {
+    for (const arrow of this.arrows) arrow.hide();
+  }
+
+  // 스티커 색을 칠하고 조각을 제자리에 둔다. focus가 있으면 그 면의 줄만, highlight가 있으면 그 칸들만
+  // 선명하게 칠하고 나머지는 흐리게 칠한다.
+  private paint(state: string, focus?: Face | null, highlight?: number[] | null): void {
     for (const [cubie, home] of this.homes) {
       cubie.position.copy(home);
       cubie.quaternion.identity();
@@ -123,27 +132,37 @@ export class CubeScene {
       const ch = state[i];
       mesh.material.color.set(ch in FACE_COLORS ? FACE_COLORS[ch as Face] : UNSET_COLOR);
       const pos = FACELETS[i].pos;
-      if (axis && pos[0] * axis[0] + pos[1] * axis[1] + pos[2] * axis[2] < 0.5) {
-        mesh.material.color.lerp(FADE_COLOR, 0.62);
-      }
+      const faded = axis
+        ? pos[0] * axis[0] + pos[1] * axis[1] + pos[2] * axis[2] < 0.5
+        : highlight ? !highlight.includes(i) : false;
+      if (faded) mesh.material.color.lerp(axis ? FADE_COLOR : DIM_COLOR, axis ? 0.62 : 0.8);
     });
   }
 
-  // 큐브를 주어진 상태(54칸 문자열)의 색으로 즉시 표시한다
-  setState(state: string): void {
+  // 큐브를 주어진 상태(54칸 문자열)의 색으로 즉시 표시한다. highlight를 주면 그 칸들만 선명하게 보인다.
+  setState(state: string, highlight?: number[] | null): void {
     this.cancelAnimation();
-    this.paint(state);
+    this.paint(state, null, highlight);
   }
 
   // 회전 하나를 보여준다: 돌릴 줄을 강조하고 화살표를 띄운 뒤, 천천히 돌린다.
   // 끝나면 회전이 적용된 상태가 된다.
   playMove(state: string, move: Move, duration: number): Promise<void> {
     this.cancelAnimation();
-    const { face, turns } = parseMove(move);
-    this.paint(state, face);
-    this.arrow.show(face, turns);
+    const whole = wholeTurns(move);
+    const face = whole ? 'U' : parseMove(move).face;
+    const turns = whole || parseMove(move).turns;
     const axis = new THREE.Vector3(...FACE_NORMALS[face]);
-    const cubies = [...this.homes].filter(([, home]) => home.dot(axis) > 0.5).map(([cubie]) => cubie);
+    let cubies = [...this.homes.keys()];
+    if (whole) {
+      // 큐브를 통째로 돌릴 때: 흐리게 하지 않고 앞면 세 줄 모두에 화살표를 띄운다
+      this.paint(state);
+      this.arrows.forEach((arrow, row) => arrow.showAt({ normal: [0, 0, 1], offset: [0, 1 - row, 0], dir: [-1, 0, 0] }, turns));
+    } else {
+      this.paint(state, face);
+      this.arrows[0].show(face, turns);
+      cubies = cubies.filter((cubie) => this.homes.get(cubie)!.dot(axis) > 0.5);
+    }
     const angle = turns === 1 ? -Math.PI / 2 : turns === 3 ? Math.PI / 2 : -Math.PI;
     return new Promise((resolve) => {
       this.animation = {
@@ -162,7 +181,7 @@ export class CubeScene {
   private tick(now: number): void {
     this.frameId = requestAnimationFrame(this.tick);
     if (this.spin) this.root.rotation.y = now / 1400;
-    this.arrow.animate(now);
+    for (const arrow of this.arrows) arrow.animate(now);
     const anim = this.animation;
     if (anim) {
       const t = Math.min(1, Math.max(0, (now - anim.start) / anim.duration));
@@ -173,7 +192,7 @@ export class CubeScene {
       }
       if (t >= 1) {
         this.animation = null;
-        this.arrow.hide();
+        this.hideArrows();
         this.paint(anim.endState);
         anim.resolve();
       }

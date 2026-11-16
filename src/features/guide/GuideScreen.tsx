@@ -6,7 +6,6 @@ import { Cube3D } from '../../render/Cube3D';
 import type { Solution } from '../../solver/solverClient';
 import { Bubble } from '../../widgets/Bubble';
 import { describeMove } from './moveText';
-import { StageInfo } from './StageInfo';
 
 interface Props {
   solution: Solution;
@@ -16,7 +15,7 @@ interface Props {
 
 // 0단계(잡는 법 안내)부터 마지막 회전까지 한 번씩 진행한다
 export function GuideScreen({ solution, onDone, onBack }: Props) {
-  const { start, moves, stages } = solution;
+  const { start, moves } = solution;
   const { t } = useI18n();
   const states = useMemo(() => statesAlong(start, moves), [start, moves]);
   const [step, setStep] = useState(0);
@@ -25,7 +24,7 @@ export function GuideScreen({ solution, onDone, onBack }: Props) {
   const [animating, setAnimating] = useState(false);
   const total = moves.length;
   const move = step > 0 ? moves[step - 1] : null;
-  const description = move ? describeMove(move, t) : null;
+  const description = move ? describeMove(move, t, step === 1) : null;
 
   // 단계를 바꾸고 해당 회전 애니메이션을 재생한다
   function goTo(next: number) {
@@ -46,15 +45,13 @@ export function GuideScreen({ solution, onDone, onBack }: Props) {
   });
 
   return (
-    <main className={'screen guide' + (stages ? ' learn' : '')}>
+    <main className="screen guide">
       <header className="topbar">
         <button className="link" onClick={onBack}>‹ {t('back')}</button>
         <h2>{step === 0 ? t('guideHoldTitle') : t('guideStep', { i: step, n: total })}</h2>
         <span />
       </header>
       <div className="progress"><i style={{ width: `${(step / total) * 100}%` }} /></div>
-
-      {stages && step > 0 && <StageInfo stage={stages[step - 1]} />}
 
       <div className="cube-stage">
         <Cube3D
@@ -68,12 +65,12 @@ export function GuideScreen({ solution, onDone, onBack }: Props) {
       {description ? (
         <Bubble>
           <strong className="move-title">{description.title}</strong>
-          <small>{description.note}</small>
+          {description.note && <small>{description.note}</small>}
         </Bubble>
       ) : (
         <Bubble>
           <strong className="move-title">{t('guideTotal', { n: total })}</strong>
-          <small>{t(stages ? 'guideHoldLearn' : 'guideHold')}</small>
+          <small>{t('guideHold')}</small>
         </Bubble>
       )}
 
@@ -94,7 +91,7 @@ export function GuideScreen({ solution, onDone, onBack }: Props) {
           </label>
         </>
       )}
-      <p className="hint">{step === 0 ? '' : t(stages ? 'guideKeepLearn' : 'guideKeep')}</p>
+      <p className="hint">{step === 0 ? '' : t('guideKeep')}</p>
     </main>
   );
 }

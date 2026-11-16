@@ -2,8 +2,15 @@
 import * as THREE from 'three';
 import type { Face, Vec3 } from '../core/faces';
 
-/** 면별 화살표 위치: 어느 보이는 면 위에, 어느 줄에, 시계 방향 회전일 때 어느 쪽을 가리키는지 */
-const ARROW_SPOTS: Record<Face, { normal: Vec3; offset: Vec3; dir: Vec3 }> = {
+/** 화살표 자리: 어느 보이는 면 위에, 어느 줄에, 시계 방향 회전일 때 어느 쪽을 가리키는지 */
+export interface ArrowSpot {
+  normal: Vec3;
+  offset: Vec3;
+  dir: Vec3;
+}
+
+/** 면별 화살표 자리 */
+const ARROW_SPOTS: Record<Face, ArrowSpot> = {
   R: { normal: [0, 0, 1], offset: [1, 0, 0], dir: [0, 1, 0] },
   L: { normal: [0, 0, 1], offset: [-1, 0, 0], dir: [0, -1, 0] },
   U: { normal: [0, 0, 1], offset: [0, 1, 0], dir: [-1, 0, 0] },
@@ -52,7 +59,11 @@ export class MoveArrow {
 
   // 주어진 회전(면, 횟수)에 맞는 위치와 방향으로 화살표를 놓고 보이게 한다
   show(face: Face, turns: number): void {
-    const spot = ARROW_SPOTS[face];
+    this.showAt(ARROW_SPOTS[face], turns);
+  }
+
+  // 주어진 자리에 화살표를 놓고 보이게 한다 (turns가 3이면 반대 방향)
+  showAt(spot: ArrowSpot, turns: number): void {
     const normal = new THREE.Vector3(...spot.normal);
     this.dir.set(...spot.dir).multiplyScalar(turns === 3 ? -1 : 1);
     const side = new THREE.Vector3().crossVectors(normal, this.dir);

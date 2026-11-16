@@ -158,20 +158,43 @@ button:focus-visible { outline: 4px solid #2f6bff; outline-offset: 2px; }
 .cube-stage::after { content: ''; position: absolute; left: 22%; right: 22%; bottom: 4px; height: 22px; border-radius: 50%; background: rgba(27, 36, 64, 0.16); filter: blur(6px); }
 .cube3d { width: 100%; height: min(40vh, 380px); min-height: 240px; position: relative; z-index: 1; }
 .cube3d canvas { display: block; }
-.guide.learn .cube3d { height: min(32vh, 320px); }
+.guide.learn .cube3d { height: min(30vh, 300px); min-height: 210px; }
+.guide.learn { gap: 10px; }
+.guide.learn h2 { font-size: 19px; }
+.guide.learn.stageIntro .cube3d { height: min(23vh, 230px); min-height: 180px; }
 .progress { height: 16px; border: 3px solid var(--ink); border-radius: 999px; background: var(--paper); overflow: hidden; }
 .progress i { display: block; height: 100%; background: var(--green); transition: width 0.3s; }
 .toggle { display: flex; gap: 8px; align-items: center; justify-content: center; font-size: 16px; }
 .toggle input { width: 22px; height: 22px; accent-color: var(--green); }
 
-/* 배우며 풀기 단계 안내 */
-.stage-info { background: var(--paper); border: 3px solid var(--ink); border-radius: 18px; padding: 10px 14px 12px; display: grid; gap: 4px; }
-.stage-info b { font: 400 18px var(--display); }
-.stage-info p { color: var(--muted); font-size: 14px; line-height: 1.45; }
-.stage-dots { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 3px; }
-.stage-dots i { height: 8px; border-radius: 999px; background: #d5deec; }
+/* 배우면서 맞추기: 단계 표시, 수업 카드, 공식 줄 */
+.stage-dots { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; }
+.stage-dots i { height: 12px; border: 2.5px solid var(--ink); border-radius: 999px; background: var(--paper); }
 .stage-dots i.past { background: var(--green); }
-.stage-dots i.now { background: var(--orange); }
+.stage-dots i.now { background: var(--sun); }
+.cube-caption, .mission-tag { position: absolute; z-index: 2; left: 50%; transform: translateX(-50%); padding: 4px 12px; border: 2.5px solid var(--ink); border-radius: 999px; background: var(--paper); font: 400 14px var(--display); white-space: nowrap; }
+.cube-caption { bottom: -4px; }
+.mission-tag { top: 0; left: 0; transform: none; display: flex; align-items: center; gap: 4px; }
+.mission-tag i { width: 13px; height: 13px; border: 2px solid var(--ink); border-radius: 4px; }
+.lesson-card { background: var(--paper); border: 3px solid var(--ink); border-radius: 20px; padding: 14px 16px; display: grid; gap: 8px; font-size: 16px; line-height: 1.5; }
+.lesson-card h3 { font: 400 25px/1.2 var(--display); }
+.lesson-card .how { white-space: pre-line; background: var(--sky); border-radius: 12px; padding: 9px 12px; font-size: 15px; }
+.lesson-card .label { font: 400 15px var(--display); color: var(--muted); margin-top: 2px; }
+.lesson-card .formula { border: 0; padding: 0; }
+.formula { background: var(--paper); border: 3px solid var(--ink); border-radius: 16px; padding: 8px 10px; display: grid; gap: 6px; }
+.formula-name { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.formula-name b { font: 400 17px var(--display); }
+.formula-name span { font-size: 13.5px; font-weight: 700; color: var(--muted); }
+.formula ol { list-style: none; display: flex; flex-wrap: wrap; gap: 4px; }
+.formula li { min-width: 40px; flex: 1 0 40px; max-width: 58px; display: grid; justify-items: center; padding: 3px 2px 4px; border: 2px solid var(--ink); border-radius: 10px; background: var(--sky); line-height: 1.15; }
+.formula li small { font-size: 10.5px; font-weight: 700; white-space: nowrap; }
+.formula li b { font-size: 17px; }
+.formula li.now { background: var(--sun); box-shadow: 0 3px 0 var(--ink); transform: translateY(-3px); }
+.formula li.past { opacity: 0.4; }
+.bubble span { font-size: 15.5px; }
+.learned { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; max-width: 340px; }
+.learned b { width: 100%; font: 400 17px var(--display); }
+.learned span { padding: 4px 10px; border: 2.5px solid var(--ink); border-radius: 999px; background: var(--paper); font-size: 14px; font-weight: 700; }
 
 /* 완성 */
 .done { align-items: center; justify-content: center; text-align: center; gap: 18px; }
