@@ -6,21 +6,25 @@ import { Cube3D } from '../../render/Cube3D';
 import { STAGE_COUNT } from '../../solver/beginner/lesson';
 import type { Solution } from '../../solver/solverClient';
 import { LearnPanel } from './LearnPanels';
+import { RepairFlow } from './RepairFlow';
 import { buildFrames, stagePicture } from './frames';
 
 interface Props {
   solution: Solution;
   onDone: () => void;
   onBack: () => void;
+  /** 큐브가 달라졌을 때: 주어진 (일부만 칠해진) 상태로 색 입력 화면을 연다 */
+  onReenter: (state: string) => void;
 }
 
 // 장면을 한 장씩 넘기며 수업을 진행한다
-export function LearnScreen({ solution, onDone, onBack }: Props) {
+export function LearnScreen({ solution, onDone, onBack, onReenter }: Props) {
   const { t } = useI18n();
   const frames = useMemo(() => buildFrames(solution.start, solution.missions ?? []), [solution]);
   const [index, setIndex] = useState(0);
   const [playId, setPlayId] = useState(0);
   const [showFormula, setShowFormula] = useState(false);
+  const [repairing, setRepairing] = useState(false);
   const frame = frames[index];
 
   // 주어진 장면으로 간다
@@ -28,6 +32,7 @@ export function LearnScreen({ solution, onDone, onBack }: Props) {
     setIndex(next);
     setPlayId((id) => id + 1);
     setShowFormula(false);
+    setRepairing(false);
   }
 
   // 다음(step=1) 또는 이전(step=-1) 장면으로 간다. "혼자 했어요" 확인 장면은 건너뛴다.
@@ -51,6 +56,27 @@ export function LearnScreen({ solution, onDone, onBack }: Props) {
     ? t('learnHoldTitle')
     : `${t('stageLabel', { i: frame.stage + 1 })} · ${t(`stage${frame.stage + 1}Title` as MessageKey)}`;
   const missionTag = frame.mission && frame.stage <= 3 && frame.type !== 'mission';
+
+  // 혼자 해 보다 틀렸을 때: 돌려놓기 화면을 보여준다
+  if (repairing && frame.type === 'tryCheck') {
+    return (
+      <main className="screen guide learn repair">
+        <header className="topbar">
+          <button className="link" onClick={() => setRepairing(false)}>‹ {t('back')}</button>
+          <h2>{t('repairTitle')}</h2>
+          <span />
+        </header>
+        <RepairFlow
+          pre={frames[frame.jumpTo!].state}
+          post={frame.state}
+          chunk={frame.chunk!}
+          onResume={(target) => (target === 'post' ? move(1) : show(frame.jumpTo!))}
+          onCancel={() => setRepairing(false)}
+          onReenter={onReenter}
+        />
+      </main>
+    );
+  }
 
   return (
     <main className={'screen guide learn ' + frame.type}>
@@ -93,6 +119,7 @@ export function LearnScreen({ solution, onDone, onBack }: Props) {
         onReplay={() => setPlayId((id) => id + 1)}
         onJump={show}
         onShowFormula={() => setShowFormula(true)}
+        onRepair={() => setRepairing(true)}
       />
       {frame.type === 'move' && <p className="hint">{t('learnKeep')}</p>}
       {frame.type === 'mission' && <p className="hint">{t('dragHint')}</p>}

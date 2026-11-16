@@ -18,6 +18,8 @@ export interface PanelProps {
   onReplay: () => void;
   onJump: (index: number) => void;
   onShowFormula: () => void;
+  /** "내 큐브가 달라요": 돌려놓기를 시작한다 */
+  onRepair: () => void;
 }
 
 // 문구 열쇠를 "머리말 + 이름(첫 글자 대문자)"으로 만든다. 예: why + cornerUp → whyCornerUp
@@ -134,7 +136,7 @@ function TryIt({ frame, showFormula, onNext, onJump, onShowFormula }: PanelProps
 // 장면 종류에 맞는 내용을 그린다
 export function LearnPanel(props: PanelProps) {
   const { t } = useI18n();
-  const { frame, total, onNext, onPrev, onJump } = props;
+  const { frame, total, onNext, onPrev, onJump, onRepair } = props;
   switch (frame.type) {
     case 'hold':
       return (
@@ -159,9 +161,10 @@ export function LearnPanel(props: PanelProps) {
           <Bubble tone="good">
             <strong className="move-title">{t('checkHead')}</strong>
             <span>{t('checkText')}</span>
-            <small>{t('stageDoneHelp')}</small>
+            <small>{t('checkHelp')}</small>
           </Bubble>
           <Buttons main={t('checkOk')} onMain={onNext}>
+            <button className="btn small" onClick={onRepair}>{t('repairOpen')}</button>
             <button className="btn small" onClick={() => onJump(frame.jumpTo!)}>↻ {t('checkSlow')}</button>
           </Buttons>
         </>

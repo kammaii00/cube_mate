@@ -55,7 +55,7 @@ export function App() {
       );
     case 'guide':
       if (solution.missions) {
-        return <LearnScreen solution={solution} onDone={() => setScreen('done')} onBack={() => setScreen('edit')} />;
+        return <LearnScreen solution={solution} onDone={() => setScreen('done')} onBack={() => setScreen('edit')} onReenter={(state) => openEditor(state, 'manual')} />;
       }
       return (
         <GuideScreen

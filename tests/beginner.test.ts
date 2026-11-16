@@ -5,6 +5,7 @@ import { randomMoves } from '../src/core/scramble';
 import { buildFrames, formulaUse, stagePicture } from '../src/features/learn/frames';
 import { solveBeginner } from '../src/solver/beginner';
 import { FORMULAS } from '../src/solver/beginner/lesson';
+import { invertMoves, listMistakes, matchMistakes, simplifyMoves, toStandard } from '../src/solver/beginner/mistakes';
 
 describe('배우며 풀기 (초보자 공식)', () => {
   it('뒤집기는 두 번 하면 원래대로 돌아오고 완성 상태를 유지한다', () => {
@@ -88,5 +89,57 @@ describe('배우며 풀기 (초보자 공식)', () => {
   });
   it('이미 완성된 큐브는 회전이 없다', () => {
     expect(solveBeginner(SOLVED).moves).toEqual([]);
+  });
+});
+
+describe('혼자 해보기 실수 찾기', () => {
+  // 윗면·앞면(·오른쪽 면)만 남기고 나머지 칸은 모르는 것으로 가린다
+  const mask = (state: string, faces: number[]) => [...state].map((c, i) => (i % 9 === 4 || faces.includes(Math.floor(i / 9)) ? c : '?')).join('');
+
+  it('회전 줄이기와 되돌리기', () => {
+    expect(simplifyMoves(['R', "R'", 'U', 'U', 'F2', 'F2', "U'"])).toEqual(['U']);
+    expect(invertMoves(['R', "U'", 'F2'])).toEqual(['F2', 'U', "R'"]);
+  });
+  it('흔한 실수를 두세 면의 색만으로 찾아내고, 돌려놓으면 수업 상태로 돌아온다', () => {
+    const { start, missions } = solveBeginner(applyMoves(SOLVED, randomMoves(30)));
+    let state = start;
+    let checked = 0, unique = 0;
+    for (const mission of missions)
+      for (const chunk of mission.chunks) {
+        const post = applyMoves(state, chunk.moves);
+        if (chunk.formula) {
+          const all = listMistakes(state, chunk.moves, FORMULAS[chunk.formula].length);
+          const m = chunk.moves;
+          const wrongs = [
+            m, // 맞게 함
+            m.slice(0, 3), // 중간에 멈춤
+            [...m.slice(0, 2), m[2][0] + (m[2].length === 1 ? "'" : ''), ...m.slice(3)], // 방향을 반대로
+            [...m.slice(0, 1), ...m.slice(2)], // 한 칸 빼먹음
+            [...m, m[0]], // 한 번 더
+          ];
+          for (const done of wrongs) {
+            const wrong = applyMoves(state, done);
+            let found = matchMistakes(all, mask(wrong, [0, 2]));
+            if (found.length > 1) found = matchMistakes(all, mask(wrong, [0, 2, 1]));
+            expect(found.length).toBeGreaterThan(0);
+            checked++;
+            if (found.length !== 1) continue;
+            unique++;
+            expect(applyMoves(wrong, found[0].fix)).toBe(found[0].target === 'post' ? post : state);
+            expect(found[0].fix.length).toBeLessThanOrEqual(done.length);
+          }
+          // 전혀 다른 상태는 찾지 못해야 한다 (엉뚱하게 짚지 않는다)
+          expect(matchMistakes(all, mask(applyMoves(state, ['D', 'L2', "B'", 'D2', 'L']), [0, 2, 1]))).toEqual([]);
+        }
+        state = post;
+      }
+    expect(unique / checked).toBeGreaterThan(0.95);
+  });
+  it('수업 방향의 상태를 색 입력 화면의 기준 방향으로 돌려놓는다', () => {
+    const { start } = solveBeginner(applyMoves(SOLVED, randomMoves(30)));
+    const turned = applyMoves(start, ['y', 'R', 'y2']);
+    const standard = toStandard(turned);
+    for (let face = 0; face < 6; face++) expect(standard[face * 9 + 4]).toBe('URFDLB'[face]);
+    expect([...standard].sort().join('')).toBe([...turned].sort().join(''));
   });
 });

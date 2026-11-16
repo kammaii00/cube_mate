@@ -24,10 +24,12 @@ interface Props {
 export function FaceEditor({ state, face, marked, onPaint }: Props) {
   const base = FACES.indexOf(face) * 9;
   const around = NEIGHBORS[face];
+  // 옆 면의 색은 그 면의 가운데 칸 색을 따른다 (큐브를 다르게 잡은 상태도 보여줄 수 있게)
+  const colorOf = (f: Face) => FACE_COLORS[(state[FACES.indexOf(f) * 9 + 4] as Face)] ?? FACE_COLORS[f];
   return (
     <div className="face-editor">
-      <i className="edge top" style={{ background: FACE_COLORS[around.top] }} />
-      <i className="edge left" style={{ background: FACE_COLORS[around.left] }} />
+      <i className="edge top" style={{ background: colorOf(around.top) }} />
+      <i className="edge left" style={{ background: colorOf(around.left) }} />
       <div className="face-grid">
         {Array.from({ length: 9 }, (_, cell) => {
           const index = base + cell;
@@ -44,8 +46,8 @@ export function FaceEditor({ state, face, marked, onPaint }: Props) {
           );
         })}
       </div>
-      <i className="edge right" style={{ background: FACE_COLORS[around.right] }} />
-      <i className="edge bottom" style={{ background: FACE_COLORS[around.bottom] }} />
+      <i className="edge right" style={{ background: colorOf(around.right) }} />
+      <i className="edge bottom" style={{ background: colorOf(around.bottom) }} />
     </div>
   );
 }
