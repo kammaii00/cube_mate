@@ -1,0 +1,46 @@
+/* 완성 화면 보상(축하·스티커판·변신·상장) 스타일 — styles.css의 변수와 버튼 모양을 그대로 쓴다 */
+
+.done { justify-content: flex-start; gap: 14px; padding-top: 22px; }
+.done .cube3d { height: min(26vh, 230px); }
+
+/* 축하: 큐비가 폴짝폴짝 뛰며 칭찬한다 */
+.celebrate { display: flex; align-items: flex-end; gap: 10px; width: 100%; }
+.celebrate-cubie { animation: hop 0.9s ease-in-out 4; }
+.praise-bubble { flex: 1; display: grid; gap: 4px; padding: 12px 16px; border: 3px solid var(--ink); border-radius: 22px; background: var(--sun); text-align: left; animation: pop 0.5s ease-out both; }
+.praise-bubble b { font: 400 25px/1.2 var(--display); }
+.praise-bubble span { font-size: 15.5px; }
+@keyframes hop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-22px) rotate(-6deg); } 60% { transform: translateY(-22px) rotate(6deg); } }
+
+/* 스티커판: 5칸 x 2줄 */
+.sticker-board { width: 100%; display: grid; gap: 8px; padding: 12px; border: 3px solid var(--ink); border-radius: 22px; background: var(--paper); }
+.sticker-board b { font: 400 19px var(--display); }
+.sticker-board small { color: var(--muted); font-size: 15px; }
+.sticker-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; }
+.sticker { min-width: 0; aspect-ratio: 1; display: grid; place-items: center; border-radius: 14px; font-size: clamp(20px, 7vw, 28px); line-height: 1; overflow: hidden; }
+.sticker.empty { border: 3px dashed #b9c4d8; color: #b9c4d8; font: 400 16px var(--display); }
+.sticker.got { border: 3px solid var(--ink); background: #fff7cc; }
+.sticker.new { animation: stick 0.8s 0.6s cubic-bezier(.3, 1.6, .5, 1) both; }
+@keyframes stick { from { transform: scale(2.6) rotate(-25deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.done-actions { width: 100%; display: grid; gap: 12px; }
+
+/* 변신 창·상장 창 공통: 화면을 덮는 반투명 바탕 + 가운데 카드 */
+.reward-overlay { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: rgba(27, 36, 64, 0.55); }
+.reward-card { width: min(100%, 420px); max-height: calc(100dvh - 32px); overflow-y: auto; display: grid; gap: 14px; justify-items: center; padding: 20px 18px; border: 3px solid var(--ink); border-radius: 26px; background: var(--paper); box-shadow: 0 8px 0 var(--ink); animation: pop 0.45s ease-out both; }
+.reward-card .btn { width: 100%; }
+
+/* 변신: 큐비 뒤로 노란 빛이 돈다 */
+.transform-cubie { position: relative; display: grid; place-items: center; padding: 20px; }
+.transform-cubie::before { content: ''; position: absolute; inset: 0; border-radius: 50%; background: repeating-conic-gradient(#ffd60a 0 15deg, #fff3a8 15deg 30deg); animation: spin 6s linear infinite; z-index: -1; }
+.transform-cubie { isolation: isolate; }
+.transform-cubie .mascot { animation: pop 0.7s 0.2s ease-out both; }
+.transform-name { font: 400 30px var(--display); }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* 상장 */
+.cert-preview { width: 100%; border-radius: 12px; border: 2px solid var(--ink); }
+.cert-name { width: 100%; padding: 14px; border: 3px solid var(--ink); border-radius: 18px; font: 400 26px var(--display); text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .celebrate-cubie, .praise-bubble, .sticker.new, .reward-card, .transform-cubie::before, .transform-cubie .mascot { animation: none; }
+}

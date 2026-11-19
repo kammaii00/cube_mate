@@ -9,6 +9,7 @@ import { LearnScreen } from './features/learn/LearnScreen';
 import { formulaUse } from './features/learn/frames';
 import { HomeScreen } from './features/home/HomeScreen';
 import { ScanScreen } from './features/scan/ScanScreen';
+import { recordSolve, rewardFor, type SolveReward } from './rewards/store';
 import { warmUpSolver, type Solution } from './solver/solverClient';
 
 type Screen = 'home' | 'scan' | 'edit' | 'guide' | 'done';
@@ -19,6 +20,7 @@ export function App() {
   const [cubeState, setCubeState] = useState(emptyState);
   const [source, setSource] = useState<'manual' | 'scan' | 'scanUnsure'>('manual');
   const [solution, setSolution] = useState<Solution>({ start: emptyState(), moves: [], missions: null });
+  const [reward, setReward] = useState<SolveReward>(() => rewardFor(0));
 
   // 앱이 열리면 풀이 엔진 준비를 미리 시작한다
   useEffect(() => warmUpSolver(), []);
@@ -28,6 +30,12 @@ export function App() {
     setCubeState(state);
     setSource(from);
     setScreen('edit');
+  }
+
+  // 큐브를 다 맞추면 스티커 한 장을 기록하고 완성 화면으로 간다
+  function finish() {
+    setReward(recordSolve());
+    setScreen('done');
   }
 
   switch (screen) {
@@ -55,12 +63,12 @@ export function App() {
       );
     case 'guide':
       if (solution.missions) {
-        return <LearnScreen solution={solution} onDone={() => setScreen('done')} onBack={() => setScreen('edit')} onReenter={(state) => openEditor(state, 'manual')} />;
+        return <LearnScreen solution={solution} onDone={finish} onBack={() => setScreen('edit')} onReenter={(state) => openEditor(state, 'manual')} />;
       }
       return (
         <GuideScreen
           solution={solution}
-          onDone={() => setScreen('done')}
+          onDone={finish}
           onBack={() => setScreen('edit')}
         />
       );
@@ -70,6 +78,7 @@ export function App() {
           state={solution.missions ? applyMoves(solution.start, solution.moves) : SOLVED}
           formulas={solution.missions ? formulaUse(solution.missions) : null}
           moveCount={solution.moves.length}
+          reward={reward}
           onRestart={() => setScreen('home')}
         />
       );

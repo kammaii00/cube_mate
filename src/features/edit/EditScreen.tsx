@@ -1,10 +1,11 @@
 // 색 확인·수정 화면: 한 면씩 크게 보며 색을 칠하거나 고치고, 검증 후 풀이를 시작한다
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { FACES, FACE_COLORS, SOLVED, emptyState, type Face } from '../../core/faces';
 import { randomState } from '../../core/scramble';
 import { validate, type ValidationError } from '../../core/validate';
 import { useI18n, type MessageKey, type Translate } from '../../i18n';
 import { solveFast, solveLearn, type Solution } from '../../solver/solverClient';
+import { useSay } from '../../voice/voice';
 import { Bubble } from '../../widgets/Bubble';
 import { FaceEditor, NEIGHBORS } from './FaceEditor';
 import { MiniNet } from './MiniNet';
@@ -56,6 +57,10 @@ export function EditScreen({ initialState, source, onSolved, onBack }: Props) {
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [message, setMessage] = useState('');
   const [solving, setSolving] = useState(false);
+  const say = useSay();
+
+  // 들어오면 "색이 다 맞으면 시작해 줘!" (스캔 끝 음성이 나오는 중이면 그 뒤에 이어서)
+  useEffect(() => say('editGo', { enqueue: true }), [say]);
 
   const counts = useMemo(
     () => Object.fromEntries(FACES.map((f) => [f, state.split(f).length - 1])) as Record<Face, number>,
@@ -88,12 +93,14 @@ export function EditScreen({ initialState, source, onSolved, onBack }: Props) {
     const found = validate(state);
     setErrors(found);
     if (found.length) {
+      say(found.every((e) => e.code === 'incomplete') ? 'errIncomplete' : 'errAny');
       const first = found.flatMap((e) => e.facelets)[0];
       if (first !== undefined) setFace(FACES[Math.floor(first / 9)]);
       return;
     }
     if (state === SOLVED) {
       setMessage(t('alreadySolved'));
+      say('alreadySolved');
       return;
     }
     setSolving(true);
@@ -101,6 +108,7 @@ export function EditScreen({ initialState, source, onSolved, onBack }: Props) {
       onSolved(await (learn ? solveLearn(state) : solveFast(state)), state);
     } catch {
       setMessage(t('errSolver'));
+      say('errAny');
       setSolving(false);
     }
   }
@@ -157,10 +165,16 @@ export function EditScreen({ initialState, source, onSolved, onBack }: Props) {
         <button className="btn small" onClick={() => update(emptyState())}>{t('editClear')}</button>
       </div>
       <button className="btn primary" disabled={solving} onClick={() => startSolve(false)}>
-        {solving ? t('editSolving') : t('editSolveFast')}
+        {solving ? t('editSolving') : (
+          <>
+            {t('editSolveFast')}
+            <small className="btn-sub">{t('editSolveFastFor')}</small>
+          </>
+        )}
       </button>
       <button className="btn sky" disabled={solving} onClick={() => startSolve(true)}>
         {t('editSolveLearn')}
+        <small className="btn-sub">{t('editSolveLearnFor')}</small>
       </button>
     </main>
   );

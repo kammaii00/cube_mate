@@ -65,6 +65,18 @@ button:focus-visible { outline: 4px solid #2f6bff; outline-offset: 2px; }
 .btn.small { padding: 11px 8px; font-size: 17px; box-shadow: 0 4px 0 var(--ink); border-radius: 16px; }
 .btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 var(--ink); }
 .btn:disabled { opacity: 0.45; cursor: default; }
+/* 알려 주고 싶은 버튼: 2초마다 옅은 노란색으로 물들며 조금 커지고, 둘레로 은은한 빛이 퍼진다 */
+.mascot-btn { flex: none; padding: 0; border: 0; background: none; cursor: pointer; }
+.mascot-btn:active { transform: scale(0.94); }
+.tap-hint { margin: 4px 0 0; font: 400 18px var(--display); animation: tap-hint 1.6s ease-in-out infinite; }
+@keyframes tap-hint { 50% { opacity: 0.45; } }
+.btn.glow { animation: btn-glow 2s ease-in-out infinite; }
+@keyframes btn-glow {
+  0%, 100% { background: var(--paper); transform: scale(1); box-shadow: 0 4px 0 var(--ink), 0 0 0 0 rgba(255, 170, 0, 0); }
+  50% { background: #fff1a8; transform: scale(1.04); box-shadow: 0 4px 0 var(--ink), 0 0 0 6px rgba(255, 170, 0, 0.4); }
+}
+/* 버튼 아래 작은 안내 줄 (추천 나이 등) */
+.btn-sub { display: block; margin-top: 4px; font-size: 14px; line-height: 1.3; opacity: 0.8; }
 .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .round { width: 50px; height: 50px; flex: none; border: 3px solid var(--ink); border-radius: 50%; background: var(--paper); box-shadow: 0 4px 0 var(--ink); font: 400 28px/1 var(--display); cursor: pointer; }
 .round:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }

@@ -5,6 +5,8 @@ import { FACELETS, FACE_COLORS, FACE_NORMALS, type Face, type Vec3 } from '../co
 import { applyMove, parseMove, wholeTurns, type Move } from '../core/moves';
 import { MoveArrow } from './arrow';
 import { Pointer } from './pointer';
+import { StickerGlow } from './glow';
+import { LayerOutline } from './outline';
 
 const UNSET_COLOR = '#b9c4d6';
 /** 돌리지 않는 조각을 흐리게 만들 때 섞는 색 */
@@ -17,6 +19,9 @@ const VIEW_DIRECTION = new THREE.Vector3(0.62, 0.55, 0.9).normalize();
 const VIEW_POSITION = VIEW_DIRECTION.clone().multiplyScalar(9.8);
 /** 화살표만 먼저 보여주고 회전을 시작하기까지 기다리는 시간(ms) */
 const LEAD_TIME = 800;
+/** 반짝임 먼저 보여주기: 돌릴 줄 테두리만 반짝이는 시간(ms), 그 뒤 화살표가 나오고 조금 있다 돈다 */
+const GLOW_TIME = 1800;
+const GLOW_ARROW_LEAD = 400;
 
 /** 화면에 따로 표시할 칸들: 찾을 조각과 그 조각이 들어갈 자리 */
 export interface Marks {
@@ -35,6 +40,8 @@ interface Animation {
   duration: number;
   endState: string;
   resolve: () => void;
+  /** 반짝임 먼저 모드에서 아직 띄우지 않은 화살표와 띄울 시각 */
+  pendingArrow?: { face: Face; turns: number; at: number } | null;
 }
 
 // 모서리가 둥근 사각형 스티커 모양을 만든다
@@ -67,6 +74,10 @@ export class CubeScene {
   /** 들어갈 자리 칸들을 분홍색으로 깜빡이게 하기 위한 원래 색 */
   private pulse: { cells: number[]; colors: THREE.Color[] } | null = null;
   private labels: PointerLabels = {};
+  /** 강조 칸 둘레의 반짝이는 테두리 */
+  private glow = new StickerGlow();
+  /** 돌릴 줄 바깥 둘레의 노란 선 */
+  private outline = new LayerOutline();
   /** 손가락으로 큐브를 돌려 본 정도(좌우, 상하). 손을 떼면 0으로 돌아간다 */
   private drag = { yaw: 0, pitch: 0, active: false, x: 0, y: 0 };
   /** 보이지 않는 곳을 가리키는 화살표들을 담는 층 (큐브를 돌려 보는 동안은 숨긴다) */
@@ -86,6 +97,7 @@ export class CubeScene {
     for (const arrow of this.arrows) this.root.add(arrow.object);
     this.pointerLayer.add(...this.pointers.map((p) => p.object));
     this.root.add(this.pointerLayer);
+    this.root.add(this.outline.object);
     if (!spin) this.listenDrag();
     this.buildCube();
     this.resizeObserver = new ResizeObserver(() => this.resize());
@@ -237,6 +249,8 @@ export class CubeScene {
   // 선명하게 칠하고 나머지는 흐리게 칠한다.
   private paint(state: string, focus?: Face | null, highlight?: number[] | null): void {
     this.pulse = null;
+    this.glow.hide();
+    this.outline.hide();
     for (const [cubie, home] of this.homes) {
       cubie.position.copy(home);
       cubie.quaternion.identity();
@@ -253,16 +267,18 @@ export class CubeScene {
     });
   }
 
-  // 큐브를 주어진 상태(54칸 문자열)의 색으로 즉시 표시한다. highlight를 주면 그 칸들만 선명하게 보인다.
-  setState(state: string, highlight?: number[] | null, marks?: Marks | null): void {
+  // 큐브를 주어진 상태(54칸 문자열)의 색으로 즉시 표시한다. highlight를 주면 그 칸들만 선명하게 보이고,
+  // glow가 true면 그 칸들 둘레에 반짝이는 테두리도 그린다.
+  setState(state: string, highlight?: number[] | null, marks?: Marks | null, glow = false): void {
     this.cancelAnimation();
     this.paint(state, null, highlight);
+    if (glow && highlight) this.glow.show(highlight.map((i) => this.stickers[i]));
     this.showMarks(marks);
   }
 
   // 회전 하나를 보여준다: 돌릴 줄을 강조하고 화살표를 띄운 뒤, 천천히 돌린다.
-  // 끝나면 회전이 적용된 상태가 된다.
-  playMove(state: string, move: Move, duration: number): Promise<void> {
+  // glowFirst면 돌릴 줄 테두리를 먼저 충분히 반짝인 뒤 화살표와 함께 돌린다. 끝나면 회전이 적용된 상태가 된다.
+  playMove(state: string, move: Move, duration: number, glowFirst = false): Promise<void> {
     this.cancelAnimation();
     const whole = wholeTurns(move);
     const face = whole ? 'U' : parseMove(move).face;
@@ -275,16 +291,20 @@ export class CubeScene {
       this.arrows.forEach((arrow, row) => arrow.showAt({ normal: [0, 0, 1], offset: [0, 1 - row, 0], dir: [-1, 0, 0] }, turns));
     } else {
       this.paint(state, face);
-      this.arrows[0].show(face, turns);
       cubies = cubies.filter((cubie) => this.homes.get(cubie)!.dot(axis) > 0.5);
+      if (glowFirst) this.outline.show(axis);
+      else this.arrows[0].show(face, turns);
     }
+    const waitGlow = glowFirst && !whole;
+    const now = performance.now();
     const angle = turns === 1 ? -Math.PI / 2 : turns === 3 ? Math.PI / 2 : -Math.PI;
     return new Promise((resolve) => {
       this.animation = {
         cubies,
         axis,
         angle,
-        start: performance.now() + LEAD_TIME,
+        start: now + (waitGlow ? GLOW_TIME + GLOW_ARROW_LEAD : LEAD_TIME),
+        pendingArrow: waitGlow ? { face, turns, at: now + GLOW_TIME } : null,
         duration: turns === 2 ? duration * 1.6 : duration,
         endState: applyMove(state, move),
         resolve,
@@ -300,7 +320,14 @@ export class CubeScene {
     for (const arrow of this.arrows) arrow.animate(now);
     for (const pointer of this.pointers) pointer.animate(now, this.camera);
     this.animatePulse(now);
+    this.glow.animate(now);
+    // 화살표가 나와 돌기 시작하면 반짝임을 멈추고 노란 선만 남긴다
+    this.outline.animate(now, !this.animation?.pendingArrow);
     const anim = this.animation;
+    if (anim?.pendingArrow && now >= anim.pendingArrow.at) {
+      this.arrows[0].show(anim.pendingArrow.face, anim.pendingArrow.turns);
+      anim.pendingArrow = null;
+    }
     if (anim) {
       const t = Math.min(1, Math.max(0, (now - anim.start) / anim.duration));
       const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
@@ -308,6 +335,7 @@ export class CubeScene {
         cubie.position.copy(this.homes.get(cubie)!).applyAxisAngle(anim.axis, anim.angle * eased);
         cubie.quaternion.setFromAxisAngle(anim.axis, anim.angle * eased);
       }
+      this.outline.setRotation(anim.axis, anim.angle * eased);
       if (t >= 1) {
         this.animation = null;
         this.hideArrows();

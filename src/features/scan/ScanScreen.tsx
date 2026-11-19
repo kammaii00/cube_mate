@@ -6,6 +6,7 @@ import { AutoCapture, cubeColorOf, findDuplicate, type CaptureStatus } from '../
 import type { RGB } from '../../scanner/colorMath';
 import { resolveCube } from '../../scanner/orient';
 import { sampleFrame, useCamera } from '../../scanner/useCamera';
+import { useSay } from '../../voice/voice';
 import { Bubble } from '../../widgets/Bubble';
 import { CaptureSlots } from './CaptureSlots';
 
@@ -40,6 +41,19 @@ export function ScanScreen({ onComplete, onManual, onBack }: Props) {
   const [dupFace, setDupFace] = useState<Face | null>(null);
   const [notice, setNotice] = useState<{ key: MessageKey; face: Face | null } | null>(null);
   const [flash, setFlash] = useState(0);
+  const say = useSay();
+
+  // 들어오면 찍는 법을 말해 주고, 카메라를 못 쓰면 어른을 부르라고 한다
+  useEffect(() => {
+    if (status === 'error') say('scanError');
+    else if (status === 'starting') say('scanIntro');
+  }, [status, say]);
+
+  // 카메라 안내가 바뀌면 짧게 말해 준다 (자주 바뀌므로 말하는 중이면 끊지 않고, 같은 말은 몇 초에 한 번만)
+  useEffect(() => {
+    if (phase === 'unaligned') say('scanAlign', { interrupt: false, cooldown: 8000 });
+    else if (phase === 'seen') say('scanSeen', { interrupt: false, cooldown: 6000 });
+  }, [phase, say]);
 
   // 찍은 면 목록을 바꾼다 (화면 표시용 상태와 판단용 참조를 함께 갱신)
   function store(next: RGB[][]) {
@@ -50,6 +64,7 @@ export function ScanScreen({ onComplete, onManual, onBack }: Props) {
   // 잠깐 보여줄 안내 문구를 띄운다
   function showNotice(key: MessageKey, face: Face | null = null) {
     setNotice({ key, face });
+    say(key, { cooldown: 1500 });
     setDupFace(face);
     noticeUntil.current = Date.now() + NOTICE_MS;
     window.clearTimeout(noticeTimer.current);
@@ -60,7 +75,9 @@ export function ScanScreen({ onComplete, onManual, onBack }: Props) {
   function addFace(colors: RGB[]) {
     const next = [...capturedRef.current, colors];
     store(next);
-    setLastFace(cubeColorOf(colors[4]));
+    const color = cubeColorOf(colors[4]);
+    setLastFace(color);
+    say([`scanCaptured_${color}`, next.length === 6 ? 'scanAllDone' : 'scanNext']);
     setDupFace(null);
     setNotice(null);
     setFlash((n) => n + 1);
