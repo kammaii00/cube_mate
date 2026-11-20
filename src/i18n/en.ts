@@ -1,11 +1,13 @@
 // 영어 문구
 import type { Messages } from './ko';
 import { lessonEn } from './lessonEn';
+import { checkEn } from './checkEn';
 import { rewardsEn } from './rewardsEn';
 
 export const en: Messages = {
   ...lessonEn,
   ...rewardsEn,
+  ...checkEn,
   appName: 'Cube Mate',
   cubiTapHint: 'Tap Cubi!',
   tagline: 'Scrambled cube? Solve it with Cubie!',

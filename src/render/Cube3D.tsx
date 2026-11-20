@@ -19,6 +19,8 @@ interface Props {
   marks?: Marks | null;
   /** true면 highlight 칸 둘레에 반짝이는 테두리를 그리고, 회전 전에는 돌릴 줄 테두리를 먼저 반짝인다 */
   glow?: boolean;
+  /** 회전할 때 짚어 줄 칸: 돌리기 전 칸(from)과 돌린 뒤 칸(to). 분홍 테두리가 따라 움직인다 */
+  watch?: { from: number; to: number } | null;
   /** true면 큐브가 제자리에서 천천히 돈다 (완성 화면용) */
   spin?: boolean;
   /** 애니메이션이 끝났을 때 호출 */
@@ -26,7 +28,7 @@ interface Props {
 }
 
 // 3D 큐브를 표시하고, move가 주어지면 그 회전을 재생한다
-export function Cube3D({ state, move, playId = 0, duration = 1100, highlight, marks, glow = false, spin = false, onAnimationEnd }: Props) {
+export function Cube3D({ state, move, playId = 0, duration = 1100, highlight, marks, glow = false, watch, spin = false, onAnimationEnd }: Props) {
   const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<CubeScene | null>(null);
@@ -51,12 +53,12 @@ export function Cube3D({ state, move, playId = 0, duration = 1100, highlight, ma
       return;
     }
     let active = true;
-    scene.playMove(state, move, duration, glow).then(() => active && endRef.current?.());
+    scene.playMove(state, move, duration, glow, watch).then(() => active && endRef.current?.());
     return () => {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, move, playId, duration, spin, glow, highlight?.join(','), marks?.piece?.join(','), marks?.slot?.join(','), t]);
+  }, [state, move, playId, duration, spin, glow, highlight?.join(','), marks?.piece?.join(','), marks?.slot?.join(','), watch?.from, t]);
 
   return <div ref={containerRef} className="cube3d" />;
 }

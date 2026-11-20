@@ -1,7 +1,7 @@
-// "혼자 해보기"에서 틀렸을 때: 아이가 했을 법한 실수들을 미리 계산해 두고,
+// 정해진 회전 묶음을 따라 하다 틀렸을 때: 아이가 했을 법한 실수들을 미리 계산해 두고,
 // 아이가 알려 준 몇 면의 색과 맞는 것을 찾아 "어디서 틀렸는지"와 "돌려놓는 방법"을 구한다.
-import { FACES } from '../../core/faces';
-import { applyMove, applyMoves, flipUpsideDown, type Move } from '../../core/moves';
+import { FACES } from '../core/faces';
+import { applyMove, applyMoves, flipUpsideDown, type Move } from '../core/moves';
 
 /** 실수의 종류: 맞게 함 / 중간에 멈춤 / 방향을 반대로 / 다른 줄을 돌림 / 한 칸 빼먹음 / 한 번 더 돌림 / 공식을 더 함 */
 export type MistakeKind = 'ok' | 'stopped' | 'direction' | 'otherFace' | 'skipped' | 'extra' | 'tooMany';

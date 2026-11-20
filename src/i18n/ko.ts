@@ -1,10 +1,12 @@
 // 한국어 문구 (초등학생도 읽기 쉬운 말투)
 import { lessonKo } from './lessonKo';
+import { checkKo } from './checkKo';
 import { rewardsKo } from './rewardsKo';
 
 export const ko = {
   ...lessonKo,
   ...rewardsKo,
+  ...checkKo,
   appName: 'Cube Mate',
   cubiTapHint: '큐비를 눌러 봐!',
   tagline: '섞인 큐브, 큐비랑 같이 맞추자!',

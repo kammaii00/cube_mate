@@ -40,6 +40,8 @@ interface Animation {
   duration: number;
   endState: string;
   resolve: () => void;
+  /** 회전이 끝난 뒤 짚는 칸 테두리를 옮겨 붙일 칸 번호 */
+  watchTo?: number;
   /** 반짝임 먼저 모드에서 아직 띄우지 않은 화살표와 띄울 시각 */
   pendingArrow?: { face: Face; turns: number; at: number } | null;
 }
@@ -76,6 +78,8 @@ export class CubeScene {
   private labels: PointerLabels = {};
   /** 강조 칸 둘레의 반짝이는 테두리 */
   private glow = new StickerGlow();
+  /** 회전 때 "이 칸이 어디로 가는지 봐!"로 짚는 칸의 분홍 테두리 (조금 두껍게) */
+  private watchGlow = new StickerGlow(SLOT_COLOR, 1.1);
   /** 돌릴 줄 바깥 둘레의 노란 선 */
   private outline = new LayerOutline();
   /** 손가락으로 큐브를 돌려 본 정도(좌우, 상하). 손을 떼면 0으로 돌아간다 */
@@ -250,6 +254,7 @@ export class CubeScene {
   private paint(state: string, focus?: Face | null, highlight?: number[] | null): void {
     this.pulse = null;
     this.glow.hide();
+    this.watchGlow.hide();
     this.outline.hide();
     for (const [cubie, home] of this.homes) {
       cubie.position.copy(home);
@@ -278,7 +283,8 @@ export class CubeScene {
 
   // 회전 하나를 보여준다: 돌릴 줄을 강조하고 화살표를 띄운 뒤, 천천히 돌린다.
   // glowFirst면 돌릴 줄 테두리를 먼저 충분히 반짝인 뒤 화살표와 함께 돌린다. 끝나면 회전이 적용된 상태가 된다.
-  playMove(state: string, move: Move, duration: number, glowFirst = false): Promise<void> {
+  // watch가 있으면 그 칸(from)에 분홍 테두리를 붙여 함께 돌리고, 끝난 뒤에도 도착한 칸(to)에서 계속 깜빡인다.
+  playMove(state: string, move: Move, duration: number, glowFirst = false, watch?: { from: number; to: number } | null): Promise<void> {
     this.cancelAnimation();
     const whole = wholeTurns(move);
     const face = whole ? 'U' : parseMove(move).face;
@@ -295,6 +301,7 @@ export class CubeScene {
       if (glowFirst) this.outline.show(axis);
       else this.arrows[0].show(face, turns);
     }
+    if (watch) this.watchGlow.show([this.stickers[watch.from]]);
     const waitGlow = glowFirst && !whole;
     const now = performance.now();
     const angle = turns === 1 ? -Math.PI / 2 : turns === 3 ? Math.PI / 2 : -Math.PI;
@@ -307,6 +314,7 @@ export class CubeScene {
         pendingArrow: waitGlow ? { face, turns, at: now + GLOW_TIME } : null,
         duration: turns === 2 ? duration * 1.6 : duration,
         endState: applyMove(state, move),
+        watchTo: watch?.to,
         resolve,
       };
     });
@@ -321,6 +329,7 @@ export class CubeScene {
     for (const pointer of this.pointers) pointer.animate(now, this.camera);
     this.animatePulse(now);
     this.glow.animate(now);
+    this.watchGlow.animate(now);
     // 화살표가 나와 돌기 시작하면 반짝임을 멈추고 노란 선만 남긴다
     this.outline.animate(now, !this.animation?.pendingArrow);
     const anim = this.animation;
@@ -340,6 +349,7 @@ export class CubeScene {
         this.animation = null;
         this.hideArrows();
         this.paint(anim.endState);
+        if (anim.watchTo !== undefined) this.watchGlow.show([this.stickers[anim.watchTo]]);
         anim.resolve();
       }
     }

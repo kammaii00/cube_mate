@@ -38,9 +38,15 @@ function ringGeometry(outer: number, inner: number): THREE.ShapeGeometry {
 
 export class StickerGlow {
   /** 스티커(0.84)보다 조금 큰 구멍과 조각 경계까지만 덮는 고리: 스티커 색 위에는 절대 겹치지 않는다 */
-  private geometry = ringGeometry(1.0, 0.88);
-  private material = new THREE.MeshBasicMaterial({ color: GLOW_COLOR.clone() });
+  private geometry: THREE.ShapeGeometry;
+  private material: THREE.MeshBasicMaterial;
   private rings: THREE.Mesh[] = [];
+
+  // 테두리 색(base)과 고리 바깥 크기(outer)를 정한다. 기본은 노란색, 스티커 경계까지만 덮는 크기
+  constructor(private base: THREE.Color = GLOW_COLOR, outer = 1.0) {
+    this.geometry = ringGeometry(outer, 0.88);
+    this.material = new THREE.MeshBasicMaterial({ color: base.clone() });
+  }
 
   // 주어진 스티커들에 빛나는 테두리를 붙인다 (스티커의 자식으로 붙여 함께 움직인다)
   show(stickers: THREE.Object3D[]): void {
@@ -59,9 +65,10 @@ export class StickerGlow {
     this.rings = [];
   }
 
-  // 매 프레임: 테두리 색을 천천히 노랑과 옅은 흰빛 사이로 오가게 한다
+  // 매 프레임: 테두리 색을 원래 색과 옅은 흰빛 사이로 오가게 한다 (짚는 칸 테두리는 더 빠르게 깜빡인다)
   animate(now: number): void {
     if (!this.rings.length) return;
-    glowColor(this.material.color, now);
+    if (this.base === GLOW_COLOR) glowColor(this.material.color, now);
+    else this.material.color.copy(this.base).lerp(FLASH_COLOR, (0.5 - 0.5 * Math.cos((now / 700) * Math.PI * 2)) * 0.6);
   }
 }

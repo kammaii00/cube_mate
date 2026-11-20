@@ -1,7 +1,7 @@
 // 앱의 최상위: 어떤 화면을 보여줄지와 화면 사이에 넘길 데이터를 관리한다
 import { useEffect, useState } from 'react';
 import { SOLVED, emptyState } from './core/faces';
-import { applyMoves } from './core/moves';
+import { applyMoves, type Move } from './core/moves';
 import { DoneScreen } from './features/done/DoneScreen';
 import { EditScreen } from './features/edit/EditScreen';
 import { GuideScreen } from './features/guide/GuideScreen';
@@ -20,6 +20,8 @@ export function App() {
   const [cubeState, setCubeState] = useState(emptyState);
   const [source, setSource] = useState<'manual' | 'scan' | 'scanUnsure'>('manual');
   const [solution, setSolution] = useState<Solution>({ start: emptyState(), moves: [], missions: null });
+  /** 빨리 맞추기 도중 '달라'에서 다시 길을 찾은 횟수 (안내 화면을 새로 시작하는 데 쓴다) */
+  const [recovered, setRecovered] = useState(0);
   const [reward, setReward] = useState<SolveReward>(() => rewardFor(0));
 
   // 앱이 열리면 풀이 엔진 준비를 미리 시작한다
@@ -38,6 +40,19 @@ export function App() {
     setScreen('done');
   }
 
+  // '달라'에서 지금 모습을 찾았을 때: 그 모습에서 새 풀이로 안내를 다시 시작한다 (남은 회전이 없으면 완성)
+  function resumeFrom(start: string, moves: Move[]) {
+    if (!moves.length) return finish();
+    setSolution({ start, moves, missions: null });
+    setRecovered((n) => n + 1);
+  }
+
+  // 지금 모습을 못 찾았을 때: 카메라로 전부 찍거나, 받은 면을 채운 채 색 입력 화면으로 간다
+  function reenter(state: string, how: 'scan' | 'paint') {
+    if (how === 'scan') setScreen('scan');
+    else openEditor(state, 'manual');
+  }
+
   switch (screen) {
     case 'scan':
       return (
@@ -54,6 +69,7 @@ export function App() {
           initialState={cubeState}
           source={source}
           onSolved={(solved, state) => {
+            setRecovered(0);
             setCubeState(state);
             setSolution(solved);
             setScreen('guide');
@@ -67,9 +83,13 @@ export function App() {
       }
       return (
         <GuideScreen
+          key={recovered}
           solution={solution}
+          resumed={recovered > 0}
           onDone={finish}
           onBack={() => setScreen('edit')}
+          onRecovered={resumeFrom}
+          onReenter={reenter}
         />
       );
     case 'done':

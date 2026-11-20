@@ -15,6 +15,28 @@
 
 완성할 때마다 praise-1~5 중 하나가 무작위로 나오고, 스티커 10장을 채우면 transform.mp3가 나옵니다.
 
+## 실수 알아채기 (src/i18n/checkKo.ts) — 2026-11-20 추가 (녹음 원본 audios/audio_45~61)
+빨리 맞추기 도중 매번 색 하나를 짚어 주고, 전체의 1/3·2/3 지점(guideKeep 직전)에 "똑같아?"를 묻고, '달라'면 면 2~3개로 지금 모습을 찾습니다.
+| 파일 | 문구 | 언제 |
+|---|---|---|
+| watchR.mp3 | 빨간색이 어디로 가는지 봐! | 매번 돌릴 때 (짚은 칸 색) |
+| watchO.mp3 | 주황색이 어디로 가는지 봐! | 〃 |
+| watchY.mp3 | 노란색이 어디로 가는지 봐! | 〃 |
+| watchG.mp3 | 초록색이 어디로 가는지 봐! | 〃 |
+| watchB.mp3 | 파란색이 어디로 가는지 봐! | 〃 |
+| watchW.mp3 | 흰색이 어디로 가는지 봐! | 〃 |
+| checkAsk.mp3 | 잠깐! 너의 큐브도 이렇게 생겼어? | 1/3·2/3 지점 확인 |
+| recoverStart.mp3 | 괜찮아! 큐비가 찾아 줄게! | '달라'를 고른 직후 |
+| recoverShowF.mp3 | 초록 면을 보여 줘! | 카메라로 찍기 |
+| recoverShowU.mp3 | 이번엔 흰색 면을 보여 줘! | 〃 |
+| recoverShowR.mp3 | 빨간 면도 보여 줘! | 〃 (두 면으로 못 좁혔을 때) |
+| recoverPaintF.mp3 | 초록색 면을 똑같이 칠해 줘! | 직접 칠하기 (카메라를 못 쓸 때) |
+| recoverPaintU.mp3 | 흰색 면을 똑같이 칠해 줘! | 〃 |
+| recoverPaintR.mp3 | 빨간색 면을 똑같이 칠해 줘! | 〃 |
+| recoverHold.mp3 | 초록색 면이 앞으로 오게 잡아 줘! | 찍을 면이 아닌 면을 보여 줬을 때 |
+| recoverFound.mp3 | 찾았다! 여기서부터 다시 가자! | 지금 모습을 찾아 다시 시작할 때 |
+| recoverLost.mp3 | 음, 잘 모르겠어. 큐브를 전부 보여 줘! | 못 찾았을 때 |
+
 ## 큐비 안내 음성 (src/voice/voice.ts)
 파일 이름 = 문구 키(src/i18n/ko.ts). 예: `guideTurn.mp3` = "여기를 화살표 방향으로 한 번 돌려!"
 - 홈: homeHello, homeGo (큐비를 누르면 재생)
@@ -22,7 +44,7 @@
 - 색 확인: editGo, editSolving, alreadySolved, errIncomplete, errAny
 - 안내: guideTotal, guideHold, guideKeep(전체의 1/3·2/3 지점, 한 템포 쉬고), guideTurn(2), guideThen(2), guidePraise1~5, guideHalf, guideLast, cubiHelp
 - 변신: transform.mp3 (audios/audio_39)
-- 완성: doneTitle 다음에 doneAgain (praise-1~5.mp3는 현재 재생하지 않음)
+- 완성: doneTitle 다음에 doneAgain("또 하고 싶으면 노란색 버튼을 눌러 줘!", audios/audio_62) (praise-1~5.mp3는 현재 재생하지 않음)
 - guideBNote.mp3는 더 이상 쓰지 않음
 말풍선의 큐비를 누르면 마지막 말을 다시 들려줍니다.
 

@@ -5,7 +5,7 @@ import { applyMoves } from '../../core/moves';
 import { useI18n, type MessageKey, type Translate } from '../../i18n';
 import { Cube3D } from '../../render/Cube3D';
 import { FORMULAS, type Chunk } from '../../solver/beginner/lesson';
-import { listMistakes, matchMistakes, toStandard, type Mistake } from '../../solver/beginner/mistakes';
+import { listMistakes, matchMistakes, toStandard, type Mistake } from '../../solver/mistakes';
 import { Bubble } from '../../widgets/Bubble';
 import { FaceEditor } from '../edit/FaceEditor';
 import { describeMove } from '../guide/moveText';

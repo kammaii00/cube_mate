@@ -5,7 +5,7 @@ import { randomMoves } from '../src/core/scramble';
 import { buildFrames, formulaUse, stagePicture } from '../src/features/learn/frames';
 import { solveBeginner } from '../src/solver/beginner';
 import { FORMULAS } from '../src/solver/beginner/lesson';
-import { invertMoves, listMistakes, matchMistakes, simplifyMoves, toStandard } from '../src/solver/beginner/mistakes';
+import { invertMoves, listMistakes, matchMistakes, simplifyMoves, toStandard } from '../src/solver/mistakes';
 
 describe('배우며 풀기 (초보자 공식)', () => {
   it('뒤집기는 두 번 하면 원래대로 돌아오고 완성 상태를 유지한다', () => {
