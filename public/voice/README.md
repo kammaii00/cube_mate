@@ -26,6 +26,7 @@
 | watchB.mp3 | 파란색이 어디로 가는지 봐! | 〃 |
 | watchW.mp3 | 흰색이 어디로 가는지 봐! | 〃 |
 | checkAsk.mp3 | 잠깐! 너의 큐브도 이렇게 생겼어? | 1/3·2/3 지점 확인 |
+| checkHow.mp3 | 똑같으면 동그라미, 다르면 가위표를 눌러 줘! | checkAsk 바로 뒤, 5초 머뭇거리면 다시 (최대 2번). audios/audio_63_똑같으면_동그라미__다르면_가위표를_눌러_줘_.mp3 |
 | recoverStart.mp3 | 괜찮아! 큐비가 찾아 줄게! | '달라'를 고른 직후 |
 | recoverShowF.mp3 | 초록 면을 보여 줘! | 카메라로 찍기 |
 | recoverShowU.mp3 | 이번엔 흰색 면을 보여 줘! | 〃 |

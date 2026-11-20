@@ -16,6 +16,10 @@ export interface SayOptions {
 export const PAUSE = '_pause';
 const PAUSE_MS = 1000;
 
+/** 음성 파일 하나가 재생을 시작할 때 알려 받는 함수 (이름, 재생 중인 오디오) */
+type StartListener = (name: string, audio: HTMLAudioElement) => void;
+const startListeners = new Set<StartListener>();
+
 let current: HTMLAudioElement | null = null;
 let currentName: string | null = null;
 let pauseTimer: ReturnType<typeof setTimeout> | null = null;
@@ -43,6 +47,7 @@ function playNext(): void {
   try {
     const audio = new Audio(`/voice/${name}.mp3`);
     current = audio;
+    startListeners.forEach((listener) => listener(name, audio));
     audio.onended = playNext;
     audio.onerror = playNext;
     audio.play().catch((e: unknown) => {
@@ -56,6 +61,12 @@ function playNext(): void {
     current = null;
     queue = [];
   }
+}
+
+// 음성 파일 하나가 재생을 시작할 때마다 알려 받는다 (돌려받은 함수를 부르면 그만 받는다)
+export function onVoiceStart(listener: StartListener): () => void {
+  startListeners.add(listener);
+  return () => startListeners.delete(listener);
 }
 
 // 지금 말하는 중인지 알려준다

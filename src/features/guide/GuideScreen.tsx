@@ -93,7 +93,7 @@ export function GuideScreen({ solution, resumed = false, onDone, onBack, onRecov
     // '맞아'를 누르면 그 단계로 가서 회전 안내 뒤 잡는 법 음성이 나온다.
     if (!checked && next === step + 1 && isKeepStep(next, total)) {
       setMode('check');
-      say('checkAsk');
+      say(['checkAsk', 'checkHow']);
       return;
     }
     setMode('turn');

@@ -221,3 +221,8 @@ button:focus-visible { outline: 4px solid #2f6bff; outline-offset: 2px; }
   .hero .mascot, .confetti i, .face-cell.marked, .scan-slot.filled .thumb, .scan-slot.dup .thumb { animation: none; }
   .confetti { display: none; }
 }
+
+/* "똑같아?" 확인: 글을 못 읽어도 알 수 있게 초록 동그라미 / 빨간 가위표 큰 버튼 */
+.check-row .check-btn { display: grid; place-items: center; gap: 2px; padding: 12px 8px 10px; background: var(--paper); }
+.check-btn svg { width: 72px; height: 72px; }
+.check-btn small { font-size: 16px; opacity: 0.7; }

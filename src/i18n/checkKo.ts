@@ -10,8 +10,9 @@ export const checkKo = {
   watchW: '흰색이 어디로 가는지 봐!',
   // 1/3·2/3 지점 확인
   checkAsk: '잠깐! 너의 큐브도 이렇게 생겼어?',
-  checkYes: '👍 맞아!',
-  checkNo: '🤔 달라!',
+  checkHow: '똑같으면 동그라미, 다르면 가위표를 눌러 줘!',
+  checkYes: '똑같아',
+  checkNo: '달라',
   guideDiff: '😵 내 큐브가 달라',
   // '달라'를 골랐을 때
   recoverTitle: '큐비랑 찾기',
