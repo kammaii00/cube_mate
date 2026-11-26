@@ -1,6 +1,6 @@
 // 꼬마 코스의 섬 정의: 조각 알기 퀴즈(화면만) → 진짜 섞은 큐브로 흰 꽃 → 흰 십자 → 1층
 import type { Face } from '../core/faces';
-import type { PetalKind } from './petal';
+import type { PuzzleKind } from './puzzle';
 
 /** 구해 줄 친구의 모양: 가운데 조각(한 색) / 모서리(두 색) / 꼭짓점(세 색) */
 export type FriendShape = 'center' | 'edge' | 'corner';
@@ -13,9 +13,9 @@ export interface PracticeLevel {
   together: boolean;
 }
 
-/** 화면 연습 레벨: 화면 속 큐브를 버튼으로 돌려 꽃잎 하나 올리기 */
+/** 화면 연습 레벨: 화면 속 큐브를 버튼으로 돌려 조각 하나 제자리로 (꽃잎 올리기·내리기, 꼭짓점 넣기) */
 export interface PuzzleLevel {
-  puzzle: PetalKind;
+  puzzle: PuzzleKind;
 }
 
 /** 레벨 하나: 퀴즈 종류 / 진짜 큐브 연습 / 화면 연습 */
@@ -50,8 +50,20 @@ export const ISLANDS: Island[] = [
     stage: 0,
     levels: [{ puzzle: 'side' }, { puzzle: 'bottom' }, { puzzle: 'busy' }, ...PRACTICE_LEVELS],
   },
-  { id: 2, kind: 'practice', friend: { shape: 'edge', colors: ['U', 'R'] }, stage: 1, levels: PRACTICE_LEVELS },
-  { id: 3, kind: 'practice', friend: { shape: 'corner', colors: ['U', 'F', 'R'] }, stage: 2, levels: PRACTICE_LEVELS },
+  {
+    id: 2,
+    kind: 'practice',
+    friend: { shape: 'edge', colors: ['U', 'R'] },
+    stage: 1,
+    levels: [{ puzzle: 'drop' }, { puzzle: 'match' }, ...PRACTICE_LEVELS],
+  },
+  {
+    id: 3,
+    kind: 'practice',
+    friend: { shape: 'corner', colors: ['U', 'F', 'R'] },
+    stage: 2,
+    levels: [{ puzzle: 'dance1' }, { puzzle: 'danceMore' }, { puzzle: 'bring' }, ...PRACTICE_LEVELS],
+  },
 ];
 
 // 진짜 연습 레벨 정보를 꺼낸다
@@ -60,7 +72,7 @@ export function practiceLevel(island: Island, level: number): PracticeLevel {
 }
 
 // 화면 연습 레벨이면 그 종류, 아니면 null
-export function puzzleOf(island: Island, level: number): PetalKind | null {
+export function puzzleOf(island: Island, level: number): PuzzleKind | null {
   const info = island.levels[level];
   return typeof info === 'object' && 'puzzle' in info ? info.puzzle : null;
 }

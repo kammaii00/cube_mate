@@ -90,8 +90,8 @@ export function dropPetals(b: LessonBuilder, petals: string[]): void {
   });
 }
 
-// 3단계: 흰색 꼭짓점 4개를 "오른쪽 공식 / 앞쪽 공식"으로 1층에 넣는다
-export function placeCorners(b: LessonBuilder): void {
+// 3단계: 흰색 꼭짓점 4개를 "오른쪽 공식 / 앞쪽 공식"으로 1층에 넣는다 (oneDance면 앞쪽 공식 대신 오른쪽 공식 5번)
+export function placeCorners(b: LessonBuilder, oneDance = false): void {
   const pieces = CORNERS.bottom.map((slot) => colorsOfSlot(b.state, CORNER_FACELETS[slot]));
   placeCheapest(b, pieces, (lb, colors) => {
     const find = (s: string) => findPiece(s, colors, CORNER_FACELETS);
@@ -113,7 +113,7 @@ export function placeCorners(b: LessonBuilder): void {
       // 흰색 스티커가 보는 방향에 따라 공식이 정해진다
       const facing = Math.floor(find(lb.state).find((t) => lb.state[t.cur] === white)!.cur / 9);
       if (facing === 1) lb.formula('right', 1, 'cornerRight');
-      else if (facing === 2) lb.formula('front', 1, 'cornerFront');
+      else if (facing === 2) lb.formula(oneDance ? 'right' : 'front', oneDance ? 5 : 1, 'cornerFront');
       else lb.formula('right', 3, 'cornerUp');
     }
     must(isHome(find(lb.state)) || null, '1층 꼭짓점');

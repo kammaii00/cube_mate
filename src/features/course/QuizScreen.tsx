@@ -8,6 +8,7 @@ import { useI18n, type MessageKey } from '../../i18n';
 import { Cube3D } from '../../render/Cube3D';
 import { useSay } from '../../voice/voice';
 import { Bubble } from '../../widgets/Bubble';
+import { StampRow } from '../../widgets/PraiseStamp';
 import { PieceIcon } from '../../widgets/PieceIcon';
 
 /** 맞힌 뒤 다음으로 넘어가기 전 잠깐 보여 주는 시간(ms) */
@@ -19,7 +20,7 @@ const TIP: Record<QuizKind, MessageKey> = { findEdge: 'quizTipEdge', findCorner:
 
 interface Props {
   kind: QuizKind;
-  /** 맞혔을 때 (firstTry: 한 번에 맞혔는지) */
+  /** 맞혔을 때 (틀렸다가 맞혀도 도장을 준다) */
   onAnswer: (firstTry: boolean) => void;
   /** 조각 소개 다시 보기 */
   onIntro: () => void;
@@ -30,14 +31,13 @@ interface Props {
 }
 
 // 문제를 보여 주고 누르기/고르기를 받는다
-export function QuizScreen({ kind, onAnswer, onIntro, wins, review = false }: Props) {
+export function QuizScreen({ kind, onAnswer, onIntro, wins }: Props) {
   const { t } = useI18n();
   const say = useSay();
   const [q] = useState(() => makeQuestion(kind));
   const [wrong, setWrong] = useState<number[] | null>(null);
-  /** 틀린 조각 깜빡임, 보는 방향 버튼 명령 (id가 바뀔 때마다 한 번) */
+  /** 틀린 조각 깜빡임 (id가 바뀔 때마다 한 번) */
   const [flash, setFlash] = useState<{ cells: number[]; id: number } | null>(null);
-  const [view, setView] = useState<{ kind: 'side' | 'flip' | 'reset'; id: number } | null>(null);
   const [tries, setTries] = useState(0);
   const [done, setDone] = useState(false);
   const names = (list: Face[]) => list.map((c) => t(('color' + c) as MessageKey)).join('-');
@@ -48,11 +48,11 @@ export function QuizScreen({ kind, onAnswer, onIntro, wins, review = false }: Pr
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 맞혔을 때: 칭찬하고 잠깐 뒤 결과를 알린다
+  // 맞혔을 때: 칭찬하고 잠깐 뒤 결과를 알린다 (몇 번 틀렸어도 맞히면 도장)
   function right() {
     setDone(true);
     say('quizRight');
-    setTimeout(() => onAnswer(tries === 0), NEXT_MS);
+    setTimeout(() => onAnswer(true), NEXT_MS);
   }
 
   // 칸을 눌렀을 때: 조각 찾기는 그 조각, 집 찾기는 그 조각의 집 자리를 눌러야 맞다
@@ -70,8 +70,8 @@ export function QuizScreen({ kind, onAnswer, onIntro, wins, review = false }: Pr
   }
 
   const where = kind === 'whereEdge';
-  const highlight = where ? (done ? q.home! : [...q.cells, ...q.centers!]) : done ? q.cells : null;
-  const filled = wins + (done && (review || tries === 0) ? 1 : 0);
+  const highlight = where ? (done || tries ? q.home! : null) : done ? q.cells : null;
+  const filled = wins + (done ? 1 : 0);
   const [a, b, c] = q.colors.map((f) => t(('color' + f) as MessageKey));
   // 틀렸을 때 알려 줄 말: 조각 찾기는 "그건 ○-○ 조각", 집 찾기는 "거긴 ○과 ○ 사이"
   const wrongText = (location: number[]) => {
@@ -79,20 +79,13 @@ export function QuizScreen({ kind, onAnswer, onIntro, wins, review = false }: Pr
     const sides = between(location);
     return sides ? t('quizWhereWrongIs', { a: t(('color' + sides[0]) as MessageKey), b: t(('color' + sides[1]) as MessageKey) }) : t('quizWhereEdgeOnly');
   };
-  // 보는 방향 버튼을 누른다
-  const turnView = (kind: 'side' | 'flip' | 'reset') => setView((v) => ({ kind, id: (v?.id ?? 0) + 1 }));
   return (
     <>
       <div className="quiz-progress" aria-label={`${filled}/${WINS_PER_LEVEL}`}>
-        {Array.from({ length: WINS_PER_LEVEL }, (_, k) => <i key={k} className={k < filled ? 'on' : ''} />)}
+        <StampRow count={filled} total={WINS_PER_LEVEL} size={30} fresh={filled > wins ? filled - 1 : -1} />
       </div>
       <div className="cube-stage">
-        <Cube3D state={where ? focusState(q, done) : q.state} highlight={highlight} glow={done || where} dim={!where} sticky view={view} flash={flash} onPick={pick} />
-      </div>
-      <div className="view-buttons">
-        <button className="btn small" onClick={() => turnView('side')}>⟲ {t('quizView')}</button>
-        <button className="btn small" onClick={() => turnView('flip')}>↕ {t('quizFlip')}</button>
-        <button className="btn small" onClick={() => turnView('reset')}>{t('quizReset')}</button>
+        <Cube3D state={where ? focusState(q, done) : q.state} highlight={highlight} glow={done || where} dim={!where} sticky flash={flash} onPick={pick} />
       </div>
       <Bubble tone={done ? 'good' : tries ? 'warn' : 'normal'}>
         <span className="quiz-ask">

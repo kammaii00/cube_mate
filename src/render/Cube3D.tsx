@@ -13,6 +13,10 @@ interface Props {
   playId?: number;
   /** 90° 회전 한 번에 걸리는 시간(ms). 아이들이 눈으로 따라갈 수 있게 느리게 잡는다 */
   duration?: number;
+  /** 화살표를 보여 준 뒤 돌기 시작할 때까지 기다리는 시간(ms, 없으면 기본) */
+  lead?: number;
+  /** 흐리게 하지 않고 늘 밝게 둘 칸 */
+  bright?: number[];
   /** 정지 화면일 때 이 칸들만 선명하게, 나머지는 흐리게 보여준다 */
   highlight?: number[] | null;
   /** 정지 화면일 때 "이 조각"과 "들어갈 자리"를 화살표로 표시할 칸들 */
@@ -40,7 +44,7 @@ interface Props {
 }
 
 // 3D 큐브를 표시하고, move가 주어지면 그 회전을 재생한다
-export function Cube3D({ state, move, playId = 0, duration = 1100, highlight, marks, glow = false, watch, spin = false, sticky = false, keepHighlight = false, dim = true, view, flash, onPick, onAnimationEnd }: Props) {
+export function Cube3D({ state, move, playId = 0, duration = 1100, lead, bright, highlight, marks, glow = false, watch, spin = false, sticky = false, keepHighlight = false, dim = true, view, flash, onPick, onAnimationEnd }: Props) {
   const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<CubeScene | null>(null);
@@ -63,17 +67,18 @@ export function Cube3D({ state, move, playId = 0, duration = 1100, highlight, ma
     const scene = sceneRef.current;
     if (!scene) return;
     scene.setLabels({ piece: t('pointPiece'), slot: t('pointSlot') });
+    scene.setBright(bright ?? []);
     if (!move) {
       scene.setState(state, highlight, marks, glow, dim);
       return;
     }
     let active = true;
-    scene.playMove(state, move, duration, glow, watch, keepHighlight ? highlight : null).then(() => active && endRef.current?.());
+    scene.playMove(state, move, duration, glow, watch, keepHighlight ? highlight : null, lead).then(() => active && endRef.current?.());
     return () => {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, move, playId, duration, spin, glow, dim, highlight?.join(','), marks?.piece?.join(','), marks?.slot?.join(','), watch?.from, t]);
+  }, [state, move, playId, duration, lead, bright?.join(','), spin, glow, dim, highlight?.join(','), marks?.piece?.join(','), marks?.slot?.join(','), watch?.from, t]);
 
   // 끌어 돌린 방향 유지, 보는 방향 버튼, 깜빡임은 각각 바뀔 때만 적용한다
   useEffect(() => sceneRef.current?.setSticky(sticky), [sticky, spin]);

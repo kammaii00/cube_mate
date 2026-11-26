@@ -1,49 +1,23 @@
-// 조각 친구 소개: 다 맞춘 큐브에서 가운데·모서리·꼭짓점 조각을 반짝이게 하고, 한 줄을 돌렸다 되돌리며 "같이 다닌다"를 보여 준다
+// 소개 화면: 장면(introSlides)마다 큐브를 돌려 보이며 설명한다 (조각 친구, 꽃잎 올리기·내리기, 오른손 춤)
 import { useEffect, useState } from 'react';
 import { SOLVED } from '../../core/faces';
-import { applyMove, applyMoves, invertMove, type Move } from '../../core/moves';
-import { daisyBase } from '../../course/petal';
-import { CORNERS, EDGES, followCells } from '../../course/pieces';
+import { applyMove, invertMove, type Move } from '../../core/moves';
+import { followCells } from '../../course/pieces';
 import { useI18n, type MessageKey } from '../../i18n';
 import { Cube3D } from '../../render/Cube3D';
 import { useSay } from '../../voice/voice';
 import { Bubble } from '../../widgets/Bubble';
+import { SLIDES, type Slide, type SlideId } from './introSlides';
 
-/** 소개 한 장: 처음 모습, 반짝일 칸, 보여 줄 회전들(없으면 멈춘 그림), 설명 문구 */
-interface Slide {
-  /** 처음 모습 (없으면 다 맞춘 큐브) */
-  base?: string;
-  /** 처음에 함께 밝게 보여 줄 같은 종류 조각 전부 (예: 모서리 12개) */
-  all?: number[];
-  cells: number[];
-  /** 차례로 돌린 뒤 거꾸로 되돌리기를 반복한다 (finish가 있으면 되돌리지 않는다) */
-  moves: Move[];
-  /** 다 돌리면 이 칸들을 반짝인 뒤 처음 모습으로 돌아가 다시 돌린다 (꽃잎 올리기: 꽃잎 4개) */
-  finish?: number[];
-  text: MessageKey;
-}
-
-/** 흰 꽃 소개 그림들: 다 된 흰 꽃, 꽃잎이 옆에 / 바닥에 / 자리가 차 있을 때 */
-const DAISY = daisyBase();
-const UF = [7, 19];
-const PETALS = [1, 3, 5, 7];
-const after = (moves: Move[]) => ({ base: applyMoves(DAISY, moves), cells: moves.reduce((c, m) => followCells(c, m), UF), finish: PETALS });
-
-export const SLIDES: Record<'center' | 'edge' | 'corner' | 'home' | 'daisy' | 'petalSide' | 'petalBottom' | 'petalBusy', Slide> = {
-  center: { cells: [4, 13, 22, 31, 40, 49], moves: ['F'], text: 'introCenter' },
-  edge: { all: EDGES.flat(), cells: [7, 19], moves: ['F'], text: 'introEdge' },
-  corner: { all: CORNERS.flat(), cells: [8, 9, 20], moves: ['R'], text: 'introCorner' },
-  home: { cells: [4, 5, 10, 13], moves: [], text: 'introHome' },
-  daisy: { base: DAISY, cells: [1, 3, 4, 5, 7], moves: ['U'], text: 'introDaisy' },
-  petalSide: { ...after(['F']), moves: ["F'"], text: 'introPetalSide' },
-  petalBottom: { ...after(['F2']), moves: ['F', 'F'], text: 'introPetalBottom' },
-  petalBusy: { ...after(['F', 'U']), moves: ["U'", "F'"], text: 'introPetalBusy' },
-};
-export type SlideId = keyof typeof SLIDES;
+export type { SlideId };
 
 /** 멈춰서 보여 주는 시간과 회전 시간(ms) */
 const STILL_MS = 1300;
 const TURN_MS = 1200;
+/** 빨리 돌리는 장면(오른손 춤)의 멈춤·회전 시간(ms) */
+const FAST_STILL_MS = 250;
+const FAST_TURN_MS = 520;
+const FAST_LEAD_MS = 150;
 /** 같은 종류 조각 전부를 보여 주는 시간, 다 맞춘 칸을 반짝이는 시간(ms) */
 const ALL_MS = 2600;
 const FINISH_MS = 2000;
@@ -60,7 +34,7 @@ export function PieceIntro({ slides, onDone, doneLabel = 'introStart' }: Props) 
   const { t } = useI18n();
   const say = useSay();
   const [k, setK] = useState(0);
-  const slide = SLIDES[slides[k]];
+  const slide: Slide = SLIDES[slides[k]];
   const last = k === slides.length - 1;
   /** 지금 모습, 반짝이는 칸, 돌리는 중인 회전, 한 바퀴(돌리기 → 되돌리기, 또는 돌리기 → 반짝) 중 몇 번째 회전인지 */
   const [view, setView] = useState({ state: slide.base ?? SOLVED, cells: slide.cells, move: null as Move | null, id: 0, step: 0 });
@@ -95,7 +69,7 @@ export function PieceIntro({ slides, onDone, doneLabel = 'introStart' }: Props) 
       return () => clearTimeout(timer);
     }
     const move = view.step < n ? slide.moves[view.step] : invertMove(slide.moves[2 * n - 1 - view.step]);
-    const timer = setTimeout(() => setView((v) => ({ ...v, move, id: v.id + 1 })), STILL_MS);
+    const timer = setTimeout(() => setView((v) => ({ ...v, move, id: v.id + 1 })), slide.fast ? FAST_STILL_MS : STILL_MS);
     return () => clearTimeout(timer);
   }, [view, slide, showAll]);
 
@@ -111,7 +85,22 @@ export function PieceIntro({ slides, onDone, doneLabel = 'introStart' }: Props) 
   return (
     <>
       <div className="cube-stage">
-        <Cube3D state={view.state} move={view.move} playId={view.id} duration={TURN_MS} highlight={showAll ? slide.all : finished ? slide.finish : view.cells} keepHighlight glow flash={flash} onAnimationEnd={turned} />
+        <Cube3D
+          state={view.state}
+          move={view.move}
+          playId={view.id}
+          duration={slide.fast ? FAST_TURN_MS : TURN_MS}
+          lead={slide.fast ? FAST_LEAD_MS : undefined}
+          highlight={showAll ? slide.all : finished ? slide.finish : view.cells}
+          keepHighlight
+          bright={slide.bright}
+          glow={!slide.fast || !view.move}
+          dim={!slide.flip}
+          sticky={!!slide.flip}
+          view={slide.flip ? { kind: 'flip', id: k + 1 } : null}
+          flash={flash}
+          onAnimationEnd={turned}
+        />
       </div>
       <Bubble>
         <strong className="move-title">{t(slide.text)}</strong>

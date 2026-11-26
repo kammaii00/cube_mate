@@ -8,9 +8,9 @@ import { useSay } from '../../voice/voice';
 import { Bubble } from '../../widgets/Bubble';
 import { CourseMap } from './CourseMap';
 import { LevelPicker } from './LevelPicker';
-import { PetalScreen } from './PetalScreen';
 import { PieceIntro, type SlideId } from './PieceIntro';
 import { PracticeScreen } from './PracticeScreen';
+import { PuzzleScreen } from './PuzzleScreen';
 import { QuizScreen } from './QuizScreen';
 import { ResultCard } from './ResultCard';
 import '../done/rewards.css';
@@ -22,7 +22,8 @@ interface Props {
 
 /** 레벨에 처음 들어갈 때 보여 줄 소개 (번호 = 섬 × 10 + 레벨).
  * 조각 알기: 모서리 찾기 전엔 가운데·모서리, 꼭짓점 찾기 전엔 꼭짓점, 집 찾기 전엔 집.
- * 흰 꽃: 흰 꽃 모습과 옆 꽃잎 올리기, 아래 꽃잎, 자리 비우기 */
+ * 흰 꽃: 흰 꽃 모습과 옆 꽃잎 올리기, 아래 꽃잎, 자리 비우기.
+ * 흰 십자: 흰 십자 모습과 꽃잎 내리기, 색 맞춰 내리기. 1층: 1층 모습과 오른손 춤 한 번, 여러 번, 데려와서 춤 */
 const INTRO: Record<number, SlideId[]> = {
   0: ['center', 'edge'],
   1: ['corner'],
@@ -30,10 +31,19 @@ const INTRO: Record<number, SlideId[]> = {
   10: ['daisy', 'petalSide'],
   11: ['petalBottom'],
   12: ['petalBusy'],
+  20: ['cross', 'crossDrop'],
+  21: ['crossMatch'],
+  30: ['layer', 'cornerDance1'],
+  31: ['cornerDanceMore'],
+  32: ['cornerBring'],
 };
 const introId = (island: number, level: number) => island * 10 + level;
-/** 진짜 큐브 연습에서 막혔을 때 다시 볼 소개 (흰 꽃: 꽃잎 올리는 법 3가지) */
-const REVIEW: Record<number, SlideId[]> = { 1: ['petalSide', 'petalBottom', 'petalBusy'] };
+/** 진짜 큐브 연습에서 막혔을 때 다시 볼 소개 (섬마다 화면 연습에서 배운 방법들) */
+const REVIEW: Record<number, SlideId[]> = {
+  1: ['petalSide', 'petalBottom', 'petalBusy'],
+  2: ['crossDrop', 'crossMatch'],
+  3: ['cornerDance1', 'cornerDanceMore', 'cornerBring'],
+};
 
 // 결과 뒤 "다음" 레벨: 방금 별을 받았고 다음 레벨이 있으면 다음, 아니면 같은 레벨 한 번 더
 function nextAfter(island: number, level: number, result: WinResult): number {
@@ -46,7 +56,7 @@ type Phase =
   | { name: 'intro'; island: number; level: number }
   /** review: 별을 이미 받은 빠른 레벨(퀴즈·화면 연습)을 복습 중일 때 이번 판에서 맞힌 수 (3개면 한 판 끝) */
   | { name: 'play'; island: number; level: number; no: number; review?: number }
-  | { name: 'result'; island: number; level: number; helped: boolean; result: WinResult; sticker: SolveReward | null; review?: boolean };
+  | { name: 'result'; island: number; level: number; helped: boolean; counted: boolean; result: WinResult; sticker: SolveReward | null; review?: boolean };
 
 // 섬과 문제 사이를 오가며 기록을 저장한다
 export function CourseScreen({ onHome }: Props) {
@@ -94,14 +104,14 @@ export function CourseScreen({ onHome }: Props) {
     // 복습: 3문제를 맞히면 한 판 끝 (별·기록은 그대로)
     if (review !== undefined) {
       if (review + 1 < WINS_PER_LEVEL) return play(island, level, review + 1);
-      return setPhase({ name: 'result', island, level, helped: false, result: { data, star: false, rescued: false }, sticker: null, review: true });
+      return setPhase({ name: 'result', island, level, helped: false, counted: false, result: { data, star: false, rescued: false }, sticker: null, review: true });
     }
     const quick = isQuick(info, level);
     const counted = quick ? !helped : practiceLevel(info, level).together || !helped;
     const result = recordWin(data, island, level, counted);
     setData(result.data);
     if (quick && !result.star && !result.rescued) return play(island, level);
-    setPhase({ name: 'result', island, level, helped, result, sticker: result.rescued ? recordSolve() : null });
+    setPhase({ name: 'result', island, level, helped, counted, result, sticker: result.rescued ? recordSolve() : null });
   }
 
   if (phase.name === 'play' && !isQuick(ISLANDS[phase.island], phase.level))
@@ -134,7 +144,7 @@ export function CourseScreen({ onHome }: Props) {
       {phase.name === 'pick' && <LevelPicker data={data} island={phase.island} onPick={(level) => play(phase.island, level)} />}
       {phase.name === 'intro' && <PieceIntro slides={INTRO[introId(phase.island, phase.level)]} onDone={() => introDone(phase.island, phase.level)} />}
       {phase.name === 'play' && puzzleOf(ISLANDS[phase.island], phase.level) && (
-        <PetalScreen
+        <PuzzleScreen
           key={phase.no}
           kind={puzzleOf(ISLANDS[phase.island], phase.level)!}
           onAnswer={(firstTry) => won(phase.island, phase.level, !firstTry, phase.review)}
@@ -159,6 +169,7 @@ export function CourseScreen({ onHome }: Props) {
             island={phase.island}
             level={phase.level}
             helped={phase.helped}
+            counted={phase.counted}
             result={phase.result}
             sticker={phase.sticker}
             review={phase.review}

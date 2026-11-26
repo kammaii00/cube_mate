@@ -9,6 +9,8 @@ import { StickerGlow } from './glow';
 import { LayerOutline } from './outline';
 
 const UNSET_COLOR = '#b9c4d6';
+/** 'S' 칸 색: 누를 수 있는 빈자리 (연한 하늘색) */
+const EMPTY_SPOT_COLOR = '#9fd8f5';
 /** 돌리지 않는 조각을 흐리게 만들 때 섞는 색 */
 const FADE_COLOR = new THREE.Color('#dfe9f5');
 /** 특정 칸만 보여줄 때 나머지 칸에 섞는 색 (흰색 칸과도 구분되도록 어둡게) */
@@ -86,6 +88,8 @@ export class CubeScene {
   private drag = { yaw: 0, pitch: 0, active: false, x: 0, y: 0 };
   /** true면 끌어서 돌린 방향을 손을 떼도 그대로 둔다 (퀴즈에서 뒤쪽 조각을 누를 수 있게) */
   private sticky = false;
+  /** 흐리게 하지 않고 늘 밝게 둘 칸 (예: 꽃잎 소개의 노란 가운데와 꽃잎 자리) */
+  private bright = new Set<number>();
   /** 버튼으로 돌려 보기할 때 부드럽게 따라갈 목표 방향 (sticky일 때만) */
   private viewGoal = { yaw: 0, pitch: 0 };
   /** 잠깐 깜빡이는 칸 테두리를 끌 타이머 */
@@ -307,6 +311,11 @@ export class CubeScene {
     }
   }
 
+  // 흐리게 하지 않을 칸들을 정한다
+  setBright(cells: number[]): void {
+    this.bright = new Set(cells);
+  }
+
   // 스티커 색을 칠하고 조각을 제자리에 둔다. focus가 있으면 그 면의 줄만, highlight가 있으면 그 칸들만
   // 선명하게 칠하고 나머지는 흐리게 칠한다 (dim이 false면 흐리게 하지 않는다).
   private paint(state: string, focus?: Face | null, highlight?: number[] | null, dim = true): void {
@@ -321,11 +330,11 @@ export class CubeScene {
     const axis = focus ? FACE_NORMALS[focus] : null;
     this.stickers.forEach((mesh, i) => {
       const ch = state[i];
-      mesh.material.color.set(ch in FACE_COLORS ? FACE_COLORS[ch as Face] : UNSET_COLOR);
+      mesh.material.color.set(ch in FACE_COLORS ? FACE_COLORS[ch as Face] : ch === 'S' ? EMPTY_SPOT_COLOR : UNSET_COLOR);
       const pos = FACELETS[i].pos;
       const faded = axis
         ? pos[0] * axis[0] + pos[1] * axis[1] + pos[2] * axis[2] < 0.5
-        : highlight && dim ? !highlight.includes(i) : false;
+        : highlight && dim ? !highlight.includes(i) && !this.bright.has(i) : false;
       if (faded) mesh.material.color.lerp(axis ? FADE_COLOR : DIM_COLOR, axis ? 0.62 : 0.8);
     });
   }
@@ -343,7 +352,8 @@ export class CubeScene {
   // glowFirst면 돌릴 줄 테두리를 먼저 충분히 반짝인 뒤 화살표와 함께 돌린다. 끝나면 회전이 적용된 상태가 된다.
   // watch가 있으면 그 칸(from)에 분홍 테두리를 붙여 함께 돌리고, 끝난 뒤에도 도착한 칸(to)에서 계속 깜빡인다.
   // keep을 주면 돌릴 줄 대신 그 칸들만 선명하게 둔 채 돌린다 (조각 소개에서 반짝이는 조각이 따라 움직이게)
-  playMove(state: string, move: Move, duration: number, glowFirst = false, watch?: { from: number; to: number } | null, keep?: number[] | null): Promise<void> {
+  // lead: 화살표를 보여 준 뒤 돌기 시작할 때까지 기다리는 시간 (오른손 춤처럼 이어 돌릴 땐 짧게)
+  playMove(state: string, move: Move, duration: number, glowFirst = false, watch?: { from: number; to: number } | null, keep?: number[] | null, lead = LEAD_TIME): Promise<void> {
     this.cancelAnimation();
     const whole = wholeTurns(move);
     const face = whole ? 'U' : parseMove(move).face;
@@ -369,7 +379,7 @@ export class CubeScene {
         cubies,
         axis,
         angle,
-        start: now + (waitGlow ? GLOW_TIME + GLOW_ARROW_LEAD : LEAD_TIME),
+        start: now + (waitGlow ? GLOW_TIME + GLOW_ARROW_LEAD : lead),
         pendingArrow: waitGlow ? { face, turns, at: now + GLOW_TIME } : null,
         duration: turns === 2 ? duration * 1.6 : duration,
         endState: applyMove(state, move),

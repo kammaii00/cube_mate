@@ -66,14 +66,17 @@ export function pickedColors(state: string, location: Piece): Face[] {
 /** 회색으로 칠할 때 쓰는 글자 (면 색이 아니라서 그림에서 회색으로 보인다) */
 const GRAY = 'X';
 
-// 집 찾기 그림: 가운데와 찾는 조각만 색을 두고 나머지는 회색. 맞히면 집 자리에 그 조각 색을 칠한다
+/** 누를 수 있는 모서리 빈자리 글자 (그림에서 연한 하늘색) */
+const SLOT = 'S';
+const EDGE_CELLS = new Set(EDGES.flat());
+
+// 집 찾기 그림: 가운데와 찾는 조각만 색을 두고, 나머지 모서리 자리는 하늘색(누르는 곳), 꼭짓점은 회색. 맞히면 집 자리에 그 조각 색을 칠한다
 export function focusState(q: Question, solved: boolean): string {
-  const keep = new Set([...q.cells, ...[4, 13, 22, 31, 40, 49]]);
+  const centers = new Set([4, 13, 22, 31, 40, 49]);
   return [...q.state]
     .map((ch, i) => {
       if (solved && q.home?.includes(i)) return homeFace(i);
-      if (solved && q.cells.includes(i)) return GRAY;
-      return keep.has(i) ? ch : GRAY;
+      return centers.has(i) ? ch : EDGE_CELLS.has(i) ? SLOT : GRAY;
     })
     .join('');
 }

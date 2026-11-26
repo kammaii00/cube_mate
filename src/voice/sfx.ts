@@ -42,3 +42,32 @@ export function playTada(): void {
   [523.25, 659.25, 783.99].forEach((f, i) => note(ac, f, t + i * 0.09, 0.25, 0.25));
   [523.25, 659.25, 783.99, 1046.5].forEach((f) => note(ac, f, t + 0.3, 0.8, 0.16));
 }
+
+// 도장 "쿵": 낮은 음이 빠르게 내려가며 사라지고, 짧은 종이 소리(잡음)를 섞는다
+export function playStamp(): void {
+  const ac = audio();
+  if (!ac) return;
+  const t = ac.currentTime + 0.01;
+  const osc = ac.createOscillator();
+  const gain = ac.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(190, t);
+  osc.frequency.exponentialRampToValueAtTime(55, t + 0.14);
+  gain.gain.setValueAtTime(0.55, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+  osc.connect(gain).connect(ac.destination);
+  osc.start(t);
+  osc.stop(t + 0.2);
+  const noise = ac.createBuffer(1, Math.floor(ac.sampleRate * 0.06), ac.sampleRate);
+  const data = noise.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+  const src = ac.createBufferSource();
+  const filter = ac.createBiquadFilter();
+  const ngain = ac.createGain();
+  src.buffer = noise;
+  filter.type = 'lowpass';
+  filter.frequency.value = 1800;
+  ngain.gain.value = 0.25;
+  src.connect(filter).connect(ngain).connect(ac.destination);
+  src.start(t);
+}

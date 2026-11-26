@@ -47,6 +47,9 @@ export function MovePlayer({ start, moves, intro, stepLabel, chunks, onDone }: P
   const [again, setAgain] = useState(false);
   const move = moves[step];
   const first = step === 0 || again;
+  /** 지금 회전이 그 묶음 안에서 몇 번째인지 (오른손 춤 몇 번째인지 알려 줄 때 쓴다) */
+  let pos = 0;
+  while (chunks && step - pos > 0 && chunks[step - pos - 1] === chunks[step]) pos++;
 
   // 회전이 바뀌거나 다시 보기를 누르면 그 회전을 말해 준다 (처음에는 안내 말부터)
   useEffect(() => {
@@ -71,7 +74,7 @@ export function MovePlayer({ start, moves, intro, stepLabel, chunks, onDone }: P
       <Bubble>
         {step === 0 && !again && <small>{t(intro)}</small>}
         <strong className="move-title">{describeMove(move, t, first, true).title}</strong>
-        {chunks?.[step] && <small className="course-tip">{whyText(chunks[step], t)}</small>}
+        {chunks?.[step] && <small className="course-tip">{whyText(chunks[step], t, pos)}</small>}
       </Bubble>
       <button className="btn primary big" onClick={() => goTo(step + 1)}>{t('guideNext')} ▶</button>
       <div className="row">

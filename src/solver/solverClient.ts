@@ -1,7 +1,7 @@
 // 화면에서 풀이 워커를 쉽게 쓰기 위한 창구
 import { SOLVED } from '../core/faces';
 import { applyMoves, isSolved, parseAlg, type Move } from '../core/moves';
-import type { BeginnerSolution } from './beginner';
+import type { BeginnerOptions, BeginnerSolution } from './beginner';
 import type { Mission } from './beginner/lesson';
 
 /** 풀이 안내 화면에 넘기는 풀이 결과 */
@@ -33,11 +33,11 @@ function getWorker(): Worker {
 }
 
 // 워커에 요청을 보내고 응답을 기다린다
-function request<T>(type: 'solve' | 'learn', facelets: string): Promise<T> {
+function request<T>(type: 'solve' | 'learn', facelets: string, options?: BeginnerOptions): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const id = nextId++;
     pending.set(id, { resolve: resolve as (r: unknown) => void, reject });
-    getWorker().postMessage({ type, id, facelets });
+    getWorker().postMessage({ type, id, facelets, options });
   });
 }
 
@@ -54,8 +54,8 @@ export async function solveFast(facelets: string): Promise<Solution> {
 }
 
 // 배우며 풀기(초보자 공식) 풀이를 계산하고 완성에 도달하는지 확인한다
-export async function solveLearn(facelets: string): Promise<Solution> {
-  const result = await request<BeginnerSolution>('learn', facelets);
+export async function solveLearn(facelets: string, options?: BeginnerOptions): Promise<Solution> {
+  const result = await request<BeginnerSolution>('learn', facelets, options);
   if (!isSolved(applyMoves(result.start, result.moves))) throw new Error('풀이 검증 실패');
   return { start: result.start, moves: result.moves, missions: result.missions };
 }

@@ -21,13 +21,13 @@ function solveFast(facelets: string): string {
 
 // 화면 쪽에서 온 요청(준비/빠른 풀이/배우며 풀기)을 처리하고 결과를 돌려보낸다
 self.onmessage = (event: MessageEvent) => {
-  const { type, id, facelets } = event.data;
+  const { type, id, facelets, options } = event.data;
   try {
     if (type === 'init') {
       ensureReady();
       self.postMessage({ type: 'ready' });
     } else if (type === 'learn') {
-      self.postMessage({ type: 'done', id, result: solveBeginner(facelets) });
+      self.postMessage({ type: 'done', id, result: solveBeginner(facelets, options) });
     } else {
       self.postMessage({ type: 'done', id, result: solveFast(facelets) });
     }

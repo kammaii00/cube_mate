@@ -15,13 +15,18 @@ export interface BeginnerSolution {
   missions: Mission[];
 }
 
+/** 풀이 방법 고르기: oneDance면 1층 꼭짓점을 오른쪽 공식(오른손 춤) 하나만 반복해서 넣는다 (꼬마 코스) */
+export interface BeginnerOptions {
+  oneDance?: boolean;
+}
+
 // 큐브 상태(흰색 위 기준)를 받아 초보자 공식 풀이와 수업 계획을 만든다
-export function solveBeginner(input: string): BeginnerSolution {
+export function solveBeginner(input: string, options: BeginnerOptions = {}): BeginnerSolution {
   const start = flipUpsideDown(input);
   const builder = new LessonBuilder(start);
   if (!isSolved(start)) {
     dropPetals(builder, makeDaisy(builder));
-    placeCorners(builder);
+    placeCorners(builder, options.oneDance);
     placeMiddleEdges(builder);
     solveLastLayer(builder);
   }

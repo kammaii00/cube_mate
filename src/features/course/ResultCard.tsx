@@ -9,11 +9,13 @@ import { useSay } from '../../voice/voice';
 import { Bubble } from '../../widgets/Bubble';
 import { Confetti } from '../../widgets/Confetti';
 import { Friend } from '../../widgets/Friend';
+import { StampRow } from '../../widgets/PraiseStamp';
 import { StarIcon } from '../../widgets/StarIcon';
 import { outfitFor } from '../../widgets/outfits';
 import { StickerBoard } from '../done/StickerBoard';
 import { TransformPopup } from '../done/TransformPopup';
 import { levelName } from './LevelPicker';
+import { LevelPicture } from './LevelPicture';
 
 interface Props {
   island: number;
@@ -23,6 +25,8 @@ interface Props {
   result: WinResult;
   /** 친구를 구해서 받은 스티커 (구하지 않았으면 null) */
   sticker: SolveReward | null;
+  /** 이번 성공이 도장 하나로 셌는지 (도움 없이 했거나 같이 해 보기 레벨) */
+  counted: boolean;
   /** 별을 받은 레벨 복습 한 판(3문제)을 끝냈으면 true */
   review?: boolean;
   onNext: () => void;
@@ -39,7 +43,7 @@ function praiseKey(helped: boolean, review: boolean): MessageKey {
 }
 
 // 결과 카드와 (필요하면) 친구 구출 창을 그린다
-export function ResultCard({ island, level, helped, result, sticker, review = false, onNext, onMap, onLevels }: Props) {
+export function ResultCard({ island, level, helped, counted, result, sticker, review = false, onNext, onMap, onLevels }: Props) {
   const { t } = useI18n();
   const say = useSay();
   const [praise] = useState(() => praiseKey(helped, review));
@@ -74,20 +78,35 @@ export function ResultCard({ island, level, helped, result, sticker, review = fa
       <Bubble tone="good">
         <strong className="move-title">{t(praise)}</strong>
       </Bubble>
-      <div className="level-progress" aria-label={`${wins}/${WINS_PER_LEVEL}`}>
-        <small>{levelName(island, level, t)}</small>
-        <span>
-          {Array.from({ length: WINS_PER_LEVEL }, (_, k) => <i key={k} className={k < wins ? 'on' : ''} />)}
-          {result.star && <StarIcon filled size={40} />}
-        </span>
+      <div className="star-card">
+        <div className="star-card-head">
+          <LevelPicture island={island} level={level} scale={0.8} />
+          <small>{levelName(island, level, t)}</small>
+        </div>
+        {result.star ? (
+          <>
+            <div className="big-star"><StarIcon filled size={118} /></div>
+            <div className="won-stamps"><StampRow count={WINS_PER_LEVEL} total={WINS_PER_LEVEL} size={44} fresh={WINS_PER_LEVEL - 1} /></div>
+          </>
+        ) : (
+          <div className="star-goal">
+            <StampRow count={wins} total={WINS_PER_LEVEL} size={60} fresh={counted && !review ? wins - 1 : -1} />
+            <span className="arrow">➜</span>
+            <StarIcon filled={wins >= WINS_PER_LEVEL} size={58} />
+          </div>
+        )}
         {starNews && <strong>{t(starNews)}</strong>}
       </div>
       {result.star && (
-        <div className="level-wins small" aria-label={`${stars.filter(Boolean).length}/${stars.length}`}>
-          {stars.map((on, k) => <i key={k} className={`${on ? 'on' : ''}${k === level ? ' new' : ''}`}>{on ? '★' : k + 1}</i>)}
+        <div className="result-stars" aria-label={`${stars.filter(Boolean).length}/${stars.length}`}>
+          <small>{t(`island${island}Name` as MessageKey)}</small>
+          <span>{stars.map((on, k) => <span key={k} className={k === level ? 'new' : ''}><StarIcon filled={on} size={32} /></span>)}</span>
         </div>
       )}
-      <button className="btn primary big" onClick={onNext}>{t(nextLevel ? 'courseNextLevel' : 'courseNext')}</button>
+      <button className={`btn primary big${nextLevel ? ' next-btn' : ''}`} onClick={onNext}>
+        {nextLevel && <LevelPicture island={island} level={level + 1} scale={0.62} />}
+        {t(nextLevel ? 'courseNextLevel' : 'courseNext')}
+      </button>
       {review && onLevels && <button className="btn big" onClick={onLevels}>{t('courseOtherLevel')}</button>}
       <button className="btn big" onClick={onMap}>{t('courseMap')}</button>
       {popup && (

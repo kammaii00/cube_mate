@@ -64,7 +64,7 @@ export function PracticeScreen({ island, stage, alone, review, onWin, onBack }: 
   // 큐비한테 보여 줬을 때: 지금 모습에서 다음 조각 하나를 같이 한다 (이미 다 됐으면 확인으로)
   async function scanned(state: string) {
     setPhase('thinking');
-    const solution = await solveLearn(state).catch(() => null);
+    const solution = await solveLearn(state, { oneDance: true }).catch(() => null);
     if (!solution) {
       setNote({ key: 'practiceScanFail' });
       return setPhase('work');
@@ -175,7 +175,7 @@ export function PracticeScreen({ island, stage, alone, review, onWin, onBack }: 
           </button>
         </>
       )}
-      {phase === 'face' && <FaceCheck center={checkCenter(stage)} onCells={checked} onCancel={() => setPhase('work')} />}
+      {phase === 'face' && <FaceCheck center={checkCenter(stage)} stage={stage} onCells={checked} onCancel={() => setPhase('work')} />}
       {phase === 'sides' && (
         <>
           <div className="cube-stage">

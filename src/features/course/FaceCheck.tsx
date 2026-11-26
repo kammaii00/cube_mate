@@ -10,30 +10,33 @@ import { FaceCamera } from '../scan/FaceCamera';
 interface Props {
   /** 보여 줄 면의 가운데 색 (D 노랑 / U 흰색) */
   center: Face;
+  /** 확인하는 단계 (0 흰 꽃, 1 흰 십자, 2 1층): "잘 됐는지 확인해 보자" 문구에 쓴다 */
+  stage: number;
   onCells: (cells: string) => void;
   onCancel: () => void;
 }
 
 // 카메라로 한 면을 찍고, 카메라가 안 되면 칠하기로 바꾼다
-export function FaceCheck({ center, onCells, onCancel }: Props) {
+export function FaceCheck({ center, stage, onCells, onCancel }: Props) {
   const { t } = useI18n();
   const say = useSay();
   const [camera, setCamera] = useState(true);
   const [painted, setPainted] = useState(emptyState);
+  const check = `practiceCheck${stage + 1}` as MessageKey;
   const ask = ((camera ? 'practiceShow' : 'practicePaint') + center) as MessageKey;
   const base = FACES.indexOf(center) * 9;
   const full = !painted.slice(base, base + 9).includes('?');
 
-  // 어느 면을 보여 줄지(칠할지) 말해 준다
+  // 잘 됐는지 확인하자고 하고, 어느 면을 보여 줄지(칠할지) 말해 준다
   useEffect(() => {
-    say(ask);
-  }, [ask, say]);
+    say([check, ask]);
+  }, [check, ask, say]);
 
   return (
     <>
       <Bubble>
-        <strong className="move-title">{t(ask)}</strong>
-        <small>{t('practiceAnyWay')}</small>
+        <strong className="move-title">{t(check)}</strong>
+        <small>{t(ask)} {t('practiceAnyWay')}</small>
       </Bubble>
       {camera ? (
         <FaceCamera center={center} onFace={onCells} onWrongCenter={() => say(ask, { cooldown: 5000 })} onError={() => setCamera(false)} />

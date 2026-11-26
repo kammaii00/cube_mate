@@ -57,6 +57,8 @@
 - 지도: courseMapHello, courseLocked, courseChoose("어떤 걸 해 볼까?", 레벨 고르기)
 - 조각 알기: quizFindEdge, quizFindCorner, quizWhere, quizRight, quizWrong, quizWhereWrong
 - 흰 꽃 화면 연습: introDaisy, introPetalSide, introPetalBottom, introPetalBusy, petalAsk, petalTipSide, petalTipBottom, petalTipBusy, petalRight, petalAway, petalReset
-- 연습: practiceMix, practiceHold, practiceGoal1~3, practiceTip1~3, practiceGuideIntro, practiceLeft("잘했어! 조금 남았어", 숫자 없이), practiceNowTry, practiceAlready, practiceCount(숫자 없이 녹음 시 "조금만 더!"), practiceSides, practiceSidesFix, practiceScanFail, practiceShowD, practiceShowU, practicePaintD, practicePaintU
+- 흰 십자 화면 연습: introCross, introCrossDrop, introCrossMatch, crossAsk, crossTipDrop, crossTipMatch, crossRight (멀어졌을 때는 petalAway를 같이 씀)
+- 1층 화면 연습(오른손 춤): introLayer, introCornerDance1, introCornerDanceMore, introCornerBring, cornerAsk, cornerTipDance1, cornerTipDanceMore, cornerTipBring, cornerRight, cornerAway
+- 연습: practiceCheck1~3("흰 꽃이/흰 십자가/1층이 잘 완성됐는지 확인해 보자!", 다 했어! 뒤 확인 화면), practiceMix, practiceHold, practiceGoal1~3, practiceTip1~3, practiceGuideIntro, practiceLeft("잘했어! 조금 남았어", 숫자 없이), practiceNowTry, practiceAlready, practiceCount(숫자 없이 녹음 시 "조금만 더!"), practiceSides, practiceSidesFix, practiceScanFail, practiceShowD, practiceShowU, practicePaintD, practicePaintU
 - 결과: courseGood1~3, courseGoodHint, courseReviewDone("복습 끝! 잘 기억하고 있네!"), courseStar, courseLeft1("한 번만 더 하면 별!"), courseLeft2("두 번 더 하면 별!"), courseLeft3("세 번 하면 별!"), courseRescued0~3
 같이 돌리기 안내는 빨리 맞추기 녹음(guideTurn 등)을 그대로 씁니다.
