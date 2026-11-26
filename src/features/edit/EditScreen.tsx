@@ -13,6 +13,9 @@ import { MiniNet } from './MiniNet';
 /** 면을 넘겨 보는 순서 (큐브를 옆으로 돌려 가며 네 면, 그다음 위·아래) */
 const FACE_ORDER: Face[] = ['F', 'R', 'B', 'L', 'U', 'D'];
 
+/** 옛 '배우면서 맞추기'(8단계 수업) 버튼. 꼬마 코스로 바꾸는 중이라 숨겨 둔다 (코드는 테스트가 끝날 때까지 남겨 둠) */
+const SHOW_OLD_LEARN = false;
+
 interface Props {
   initialState: string;
   /** 어떻게 들어왔는지: 직접 칠하기 / 스캔 성공 / 스캔했지만 일부가 불확실 */
@@ -20,6 +23,8 @@ interface Props {
   /** 풀이 결과와, 풀이에 사용한 (수정이 반영된) 큐브 상태를 넘긴다 */
   onSolved: (solution: Solution, state: string) => void;
   onBack: () => void;
+  /** 주면 풀이 대신 색이 맞는지만 보고 이 함수로 넘긴다 (꼬마 코스 "큐비한테 보여 주기": 버튼 문구도 바뀌고 섞기 버튼은 숨긴다) */
+  onReady?: (state: string) => void;
 }
 
 // 검증 오류 하나를 사용자에게 보여줄 문장으로 바꾼다
@@ -49,7 +54,7 @@ function errorText(error: ValidationError, t: Translate): string {
 }
 
 // 큰 면 편집기, 색 팔레트, 작은 전개도, 검증 메시지, 풀이 시작 버튼을 그린다
-export function EditScreen({ initialState, source, onSolved, onBack }: Props) {
+export function EditScreen({ initialState, source, onSolved, onBack, onReady }: Props) {
   const { t } = useI18n();
   const [state, setState] = useState(initialState);
   const [face, setFace] = useState<Face>('F');
@@ -103,6 +108,7 @@ export function EditScreen({ initialState, source, onSolved, onBack }: Props) {
       say('alreadySolved');
       return;
     }
+    if (onReady) return onReady(state);
     setSolving(true);
     try {
       onSolved(await (learn ? solveLearn(state) : solveFast(state)), state);
@@ -161,21 +167,23 @@ export function EditScreen({ initialState, source, onSolved, onBack }: Props) {
       )}
 
       <div className="row">
-        <button className="btn small" onClick={() => update(randomState())}>🎲 {t('editRandom')}</button>
+        {onReady ? <span /> : <button className="btn small" onClick={() => update(randomState())}>🎲 {t('editRandom')}</button>}
         <button className="btn small" onClick={() => update(emptyState())}>{t('editClear')}</button>
       </div>
       <button className="btn primary" disabled={solving} onClick={() => startSolve(false)}>
         {solving ? t('editSolving') : (
           <>
-            {t('editSolveFast')}
-            <small className="btn-sub">{t('editSolveFastFor')}</small>
+            {t(onReady ? 'practiceAsk' : 'editSolveFast')}
+            <small className="btn-sub">{t(onReady ? 'practiceAskNote' : 'editSolveFastFor')}</small>
           </>
         )}
       </button>
-      <button className="btn sky" disabled={solving} onClick={() => startSolve(true)}>
-        {t('editSolveLearn')}
-        <small className="btn-sub">{t('editSolveLearnFor')}</small>
-      </button>
+      {SHOW_OLD_LEARN && (
+        <button className="btn sky" disabled={solving} onClick={() => startSolve(true)}>
+          {t('editSolveLearn')}
+          <small className="btn-sub">{t('editSolveLearnFor')}</small>
+        </button>
+      )}
     </main>
   );
 }

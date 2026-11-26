@@ -3,11 +3,13 @@ import type { Messages } from './ko';
 import { lessonEn } from './lessonEn';
 import { checkEn } from './checkEn';
 import { rewardsEn } from './rewardsEn';
+import { courseEn } from './courseEn';
 
 export const en: Messages = {
   ...lessonEn,
   ...rewardsEn,
   ...checkEn,
+  ...courseEn,
   appName: 'Cube Mate',
   cubiTapHint: 'Tap Cubi!',
   tagline: 'Scrambled cube? Solve it with Cubie!',

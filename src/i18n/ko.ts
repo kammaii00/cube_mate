@@ -2,11 +2,13 @@
 import { lessonKo } from './lessonKo';
 import { checkKo } from './checkKo';
 import { rewardsKo } from './rewardsKo';
+import { courseKo } from './courseKo';
 
 export const ko = {
   ...lessonKo,
   ...rewardsKo,
   ...checkKo,
+  ...courseKo,
   appName: 'Cube Mate',
   cubiTapHint: '큐비를 눌러 봐!',
   tagline: '섞인 큐브, 큐비랑 같이 맞추자!',

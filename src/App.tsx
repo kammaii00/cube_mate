@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { SOLVED, emptyState } from './core/faces';
 import { applyMoves, type Move } from './core/moves';
+import { CourseScreen } from './features/course/CourseScreen';
 import { DoneScreen } from './features/done/DoneScreen';
 import { EditScreen } from './features/edit/EditScreen';
 import { GuideScreen } from './features/guide/GuideScreen';
@@ -12,7 +13,7 @@ import { ScanScreen } from './features/scan/ScanScreen';
 import { recordSolve, rewardFor, type SolveReward } from './rewards/store';
 import { warmUpSolver, type Solution } from './solver/solverClient';
 
-type Screen = 'home' | 'scan' | 'edit' | 'guide' | 'done';
+type Screen = 'home' | 'scan' | 'edit' | 'guide' | 'done' | 'course';
 
 // 홈 → 스캔/입력 → 확인 → 풀이 안내 → 완성 순서로 화면을 전환한다
 export function App() {
@@ -102,7 +103,17 @@ export function App() {
           onRestart={() => setScreen('home')}
         />
       );
+    case 'course':
+      return (
+        <CourseScreen onHome={() => setScreen('home')} />
+      );
     default:
-      return <HomeScreen onScan={() => setScreen('scan')} onManual={() => openEditor(emptyState(), 'manual')} />;
+      return (
+        <HomeScreen
+          onScan={() => setScreen('scan')}
+          onManual={() => openEditor(emptyState(), 'manual')}
+          onCourse={() => setScreen('course')}
+        />
+      );
   }
 }

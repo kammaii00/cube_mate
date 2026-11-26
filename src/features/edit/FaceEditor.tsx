@@ -17,19 +17,21 @@ interface Props {
   /** 문제가 의심되어 강조할 칸 번호들 */
   marked: number[];
   onPaint: (index: number) => void;
+  /** false면 네 방향 색 띠를 숨긴다 (방향과 상관없는 한 면 확인에서 헷갈리지 않게) */
+  edges?: boolean;
 }
 
 // 큰 3x3 칸과, 네 방향에 어떤 면이 붙어 있는지 알려주는 색 띠를 그린다.
 // 가운데 칸은 면의 기준이라 바꿀 수 없다.
-export function FaceEditor({ state, face, marked, onPaint }: Props) {
+export function FaceEditor({ state, face, marked, onPaint, edges = true }: Props) {
   const base = FACES.indexOf(face) * 9;
   const around = NEIGHBORS[face];
   // 옆 면의 색은 그 면의 가운데 칸 색을 따른다 (큐브를 다르게 잡은 상태도 보여줄 수 있게)
   const colorOf = (f: Face) => FACE_COLORS[(state[FACES.indexOf(f) * 9 + 4] as Face)] ?? FACE_COLORS[f];
   return (
     <div className="face-editor">
-      <i className="edge top" style={{ background: colorOf(around.top) }} />
-      <i className="edge left" style={{ background: colorOf(around.left) }} />
+      <i className={`edge top${edges ? '' : ' hidden'}`} style={{ background: colorOf(around.top) }} />
+      <i className={`edge left${edges ? '' : ' hidden'}`} style={{ background: colorOf(around.left) }} />
       <div className="face-grid">
         {Array.from({ length: 9 }, (_, cell) => {
           const index = base + cell;
@@ -46,8 +48,8 @@ export function FaceEditor({ state, face, marked, onPaint }: Props) {
           );
         })}
       </div>
-      <i className="edge right" style={{ background: colorOf(around.right) }} />
-      <i className="edge bottom" style={{ background: colorOf(around.bottom) }} />
+      <i className={`edge right${edges ? '' : ' hidden'}`} style={{ background: colorOf(around.right) }} />
+      <i className={`edge bottom${edges ? '' : ' hidden'}`} style={{ background: colorOf(around.bottom) }} />
     </div>
   );
 }

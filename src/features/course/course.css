@@ -1,0 +1,77 @@
+/* 꼬마 코스(큐브 배우기 섬) 화면 스타일 */
+.course-step { text-align: center; font: 400 16px var(--display); color: var(--muted); }
+.course-tip { display: block; margin-top: 6px; color: var(--muted); }
+
+/* 섬 지도: 섬 카드를 점선 길로 위에서 아래로 잇는다 */
+.island-path { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 18px; position: relative; }
+.island-path::before { content: ''; position: absolute; left: 50px; top: 30px; bottom: 30px; border-left: 5px dashed rgba(27, 36, 64, 0.25); }
+.island {
+  position: relative; width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 14px;
+  border: 3px solid var(--ink); border-radius: 24px; background: #c9f1c0; box-shadow: 0 5px 0 var(--ink);
+  text-align: left; cursor: pointer;
+}
+.island.hidden { background: #e3e8f2; color: var(--muted); box-shadow: 0 5px 0 #9aa6c0; border-color: #9aa6c0; }
+.island.free { background: #fff4b8; }
+.island:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+.island-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.island-text b { font: 400 21px var(--display); }
+.island-text small { font-size: 15px; }
+.island-stars { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
+.island-stars i { font-style: normal; font-size: 22px; color: #c3cad8; }
+.island-stars i.on { color: #f5a400; text-shadow: 0 1px 0 var(--ink); }
+.island-stars em { font-style: normal; font-size: 13px; color: var(--muted); margin-left: 6px; }
+.friend.hidden { filter: blur(0.6px); }
+
+/* 결과: 이번 레벨 성공 칸 (3칸) */
+.level-wins { display: flex; justify-content: center; gap: 12px; }
+.level-wins i { width: 34px; height: 34px; border: 3px solid var(--ink); border-radius: 50%; background: var(--paper); }
+.level-wins i.on { background: var(--sun); animation: win-pop 0.5s ease-out; }
+@keyframes win-pop { 0% { transform: scale(0.4); } 70% { transform: scale(1.2); } 100% { transform: scale(1); } }
+.rescue-friend { display: flex; justify-content: center; animation: win-pop 0.7s ease-out; }
+
+/* 홈 화면의 구한 친구들 */
+.home-friends { display: flex; justify-content: center; gap: 6px; margin-top: 6px; }
+
+/* 조각 알기 퀴즈 */
+.quiz-ask { display: flex; align-items: center; gap: 8px; }
+.piece-icon { flex: none; }
+.view-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.view-buttons .btn.small { font-size: 15px; padding: 9px 4px; }
+.level-wins i { display: grid; place-items: center; font: 400 16px var(--display); font-style: normal; color: var(--muted); }
+.level-wins i.on { color: var(--ink); animation: none; }
+.level-wins i.new { animation: win-pop 0.5s ease-out; }
+.quiz-progress { display: flex; justify-content: center; gap: 8px; }
+.quiz-progress i { width: 18px; height: 18px; border: 2.5px solid var(--ink); border-radius: 50%; background: var(--paper); }
+.quiz-progress i.on { background: var(--sun); }
+/* 레벨 고르기: 그림 카드 */
+.level-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px; }
+.level-card { width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 16px; border: 3px solid var(--ink); border-radius: 22px; background: var(--paper); box-shadow: 0 5px 0 var(--ink); color: var(--ink); text-align: left; }
+.level-card:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+.level-card:disabled { opacity: 0.45; }
+.level-pic { display: flex; align-items: center; gap: 4px; flex: none; }
+.level-pic em { font-size: 30px; font-style: normal; }
+.level-info { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.level-info small { font-size: 14px; color: var(--muted); }
+.level-dots { display: flex; gap: 6px; }
+.level-dots i { width: 16px; height: 16px; border: 2px solid var(--ink); border-radius: 50%; }
+.level-dots i.on { background: var(--sun); }
+/* 흰 꽃 화면 연습: 돌리기 버튼 */
+.move-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.move-grid.n6 { grid-template-columns: repeat(3, 1fr); }
+.move-btn { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border: 3px solid var(--ink); border-radius: 16px; background: var(--paper); box-shadow: 0 4px 0 var(--ink); color: var(--ink); }
+.move-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.move-btn:disabled { opacity: 0.6; }
+.move-btn small { font: 400 13px var(--display); white-space: nowrap; }
+.move-btn.hint, .btn.pulse { animation: btn-glow 1s ease-in-out infinite; background: #fff4b8; }
+.petal-stage .cube3d { height: min(30vh, 290px); min-height: 210px; }
+.move-grid.n6 svg { width: 48px; height: 48px; }
+.move-grid.n6 .move-btn { padding: 4px 2px; }
+/* 결과 화면: 이번 레벨 진행 (점 3개 + 별까지 남은 횟수) */
+.level-progress { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.level-progress small { font-size: 15px; color: var(--muted); }
+.level-progress span { display: flex; align-items: center; gap: 12px; }
+.level-progress i { width: 34px; height: 34px; border: 3px solid var(--ink); border-radius: 50%; background: var(--paper); }
+.level-progress i.on { background: var(--sun); }
+.level-progress strong { font: 400 22px var(--display); }
+.level-wins.small { gap: 8px; }
+.level-wins.small i { width: 26px; height: 26px; font-size: 13px; border-width: 2.5px; }

@@ -9,15 +9,17 @@ interface Props {
   state: string;
   face: Face;
   onChange: (state: string) => void;
+  /** false면 네 방향 색 띠를 숨긴다 */
+  edges?: boolean;
 }
 
 // 고른 색으로 누른 칸을 칠한다 (처음 고른 색은 그 면의 가운데 색)
-export function FacePaint({ state, face, onChange }: Props) {
+export function FacePaint({ state, face, onChange, edges = true }: Props) {
   const { t } = useI18n();
   const [selected, setSelected] = useState<Face>(face);
   return (
     <>
-      <FaceEditor state={state} face={face} marked={[]} onPaint={(i) => onChange(state.slice(0, i) + selected + state.slice(i + 1))} />
+      <FaceEditor state={state} face={face} marked={[]} edges={edges} onPaint={(i) => onChange(state.slice(0, i) + selected + state.slice(i + 1))} />
       <div className="palette">
         {FACES.map((f) => (
           <button

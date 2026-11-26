@@ -84,6 +84,16 @@ export class CubeScene {
   private outline = new LayerOutline();
   /** 손가락으로 큐브를 돌려 본 정도(좌우, 상하). 손을 떼면 0으로 돌아간다 */
   private drag = { yaw: 0, pitch: 0, active: false, x: 0, y: 0 };
+  /** true면 끌어서 돌린 방향을 손을 떼도 그대로 둔다 (퀴즈에서 뒤쪽 조각을 누를 수 있게) */
+  private sticky = false;
+  /** 버튼으로 돌려 보기할 때 부드럽게 따라갈 목표 방향 (sticky일 때만) */
+  private viewGoal = { yaw: 0, pitch: 0 };
+  /** 잠깐 깜빡이는 칸 테두리를 끌 타이머 */
+  private flashTimer = 0;
+  /** 누른 곳과 움직인 거리 (조금만 움직이고 떼면 "칸 누르기"로 본다) */
+  private press = { x: 0, y: 0, moved: 0 };
+  /** 칸을 눌렀을 때 알려 받을 함수 (꼬마 코스 조각 찾기 퀴즈) */
+  private pickListener: ((cell: number) => void) | null = null;
   /** 보이지 않는 곳을 가리키는 화살표들을 담는 층 (큐브를 돌려 보는 동안은 숨긴다) */
   private pointerLayer = new THREE.Group();
   private animation: Animation | null = null;
@@ -151,6 +161,7 @@ export class CubeScene {
   }
 
   private onDown = (e: PointerEvent): void => {
+    this.press = { x: e.clientX, y: e.clientY, moved: 0 };
     this.drag.active = true;
     this.drag.x = e.clientX;
     this.drag.y = e.clientY;
@@ -159,20 +170,67 @@ export class CubeScene {
 
   private onMove = (e: PointerEvent): void => {
     if (!this.drag.active) return;
+    this.press.moved += Math.abs(e.clientX - this.drag.x) + Math.abs(e.clientY - this.drag.y);
     this.drag.yaw += (e.clientX - this.drag.x) * 0.012;
-    this.drag.pitch = Math.max(-1.4, Math.min(1.4, this.drag.pitch + (e.clientY - this.drag.y) * 0.012));
+    const pitch = this.drag.pitch + (e.clientY - this.drag.y) * 0.012;
+    this.drag.pitch = this.sticky ? pitch : Math.max(-1.4, Math.min(1.4, pitch));
     this.drag.x = e.clientX;
     this.drag.y = e.clientY;
   };
 
-  private onUp = (): void => {
+  private onUp = (e: PointerEvent): void => {
+    const tapped = this.drag.active && this.press.moved < 8;
     this.drag.active = false;
+    this.viewGoal = { yaw: this.drag.yaw, pitch: this.drag.pitch };
+    if (tapped && this.pickListener && e.type === 'pointerup') {
+      const cell = this.pickAt(e.clientX, e.clientY);
+      if (cell !== null) this.pickListener(cell);
+    }
   };
+
+  // 끌어서 돌린 방향을 그대로 둘지 정한다 (끄면 처음 방향으로 돌아간다)
+  setSticky(on: boolean): void {
+    this.sticky = on;
+    if (!on) this.viewGoal = { yaw: 0, pitch: 0 };
+  }
+
+  // 버튼으로 큐브 보는 방향을 바꾼다: 옆으로 90°, 위아래 뒤집기, 처음 방향
+  turnView(kind: 'side' | 'flip' | 'reset'): void {
+    const goal = this.viewGoal;
+    if (kind === 'reset') this.viewGoal = { yaw: 0, pitch: 0 };
+    else if (kind === 'side') this.viewGoal = { ...goal, yaw: goal.yaw + Math.PI / 2 };
+    else this.viewGoal = { ...goal, pitch: Math.abs(goal.pitch) > 1 ? 0 : Math.PI };
+  }
+
+  // 칸들 둘레에 분홍 테두리를 ms 동안 깜빡인다 (다른 칸은 어둡게 하지 않는다)
+  flash(cells: number[], ms = 1300): void {
+    window.clearTimeout(this.flashTimer);
+    this.watchGlow.show(cells.map((i) => this.stickers[i]));
+    this.flashTimer = window.setTimeout(() => this.watchGlow.hide(), ms);
+  }
+
+  // 칸을 누르면 알려 받을 함수를 정한다 (null이면 누르기를 받지 않는다)
+  setPickListener(listener: ((cell: number) => void) | null): void {
+    this.pickListener = listener;
+  }
+
+  // 화면의 한 점(clientX, clientY)에 보이는 스티커 칸 번호를 찾는다 (없으면 null)
+  private pickAt(x: number, y: number): number | null {
+    const rect = this.renderer.domElement.getBoundingClientRect();
+    const ndc = new THREE.Vector2(((x - rect.left) / rect.width) * 2 - 1, -((y - rect.top) / rect.height) * 2 + 1);
+    const ray = new THREE.Raycaster();
+    ray.setFromCamera(ndc, this.camera);
+    const hit = ray.intersectObjects(this.stickers, false)[0];
+    return hit ? this.stickers.indexOf(hit.object as (typeof this.stickers)[number]) : null;
+  }
 
   // 매 프레임: 돌려 본 만큼 큐브를 기울이고, 손을 떼면 부드럽게 처음 위치로 되돌린다
   private applyDrag(): void {
     const d = this.drag;
-    if (!d.active) {
+    if (!d.active && this.sticky) {
+      d.yaw += (this.viewGoal.yaw - d.yaw) * 0.18;
+      d.pitch += (this.viewGoal.pitch - d.pitch) * 0.18;
+    } else if (!d.active) {
       // 가장 가까운 정면(한 바퀴 돌았으면 그만큼 덜 돌려서)으로 돌아간다
       d.yaw -= Math.round(d.yaw / (Math.PI * 2)) * Math.PI * 2;
       d.yaw *= 0.86;
@@ -250,8 +308,8 @@ export class CubeScene {
   }
 
   // 스티커 색을 칠하고 조각을 제자리에 둔다. focus가 있으면 그 면의 줄만, highlight가 있으면 그 칸들만
-  // 선명하게 칠하고 나머지는 흐리게 칠한다.
-  private paint(state: string, focus?: Face | null, highlight?: number[] | null): void {
+  // 선명하게 칠하고 나머지는 흐리게 칠한다 (dim이 false면 흐리게 하지 않는다).
+  private paint(state: string, focus?: Face | null, highlight?: number[] | null, dim = true): void {
     this.pulse = null;
     this.glow.hide();
     this.watchGlow.hide();
@@ -267,16 +325,16 @@ export class CubeScene {
       const pos = FACELETS[i].pos;
       const faded = axis
         ? pos[0] * axis[0] + pos[1] * axis[1] + pos[2] * axis[2] < 0.5
-        : highlight ? !highlight.includes(i) : false;
+        : highlight && dim ? !highlight.includes(i) : false;
       if (faded) mesh.material.color.lerp(axis ? FADE_COLOR : DIM_COLOR, axis ? 0.62 : 0.8);
     });
   }
 
   // 큐브를 주어진 상태(54칸 문자열)의 색으로 즉시 표시한다. highlight를 주면 그 칸들만 선명하게 보이고,
   // glow가 true면 그 칸들 둘레에 반짝이는 테두리도 그린다.
-  setState(state: string, highlight?: number[] | null, marks?: Marks | null, glow = false): void {
+  setState(state: string, highlight?: number[] | null, marks?: Marks | null, glow = false, dim = true): void {
     this.cancelAnimation();
-    this.paint(state, null, highlight);
+    this.paint(state, null, highlight, dim);
     if (glow && highlight) this.glow.show(highlight.map((i) => this.stickers[i]));
     this.showMarks(marks);
   }
@@ -284,7 +342,8 @@ export class CubeScene {
   // 회전 하나를 보여준다: 돌릴 줄을 강조하고 화살표를 띄운 뒤, 천천히 돌린다.
   // glowFirst면 돌릴 줄 테두리를 먼저 충분히 반짝인 뒤 화살표와 함께 돌린다. 끝나면 회전이 적용된 상태가 된다.
   // watch가 있으면 그 칸(from)에 분홍 테두리를 붙여 함께 돌리고, 끝난 뒤에도 도착한 칸(to)에서 계속 깜빡인다.
-  playMove(state: string, move: Move, duration: number, glowFirst = false, watch?: { from: number; to: number } | null): Promise<void> {
+  // keep을 주면 돌릴 줄 대신 그 칸들만 선명하게 둔 채 돌린다 (조각 소개에서 반짝이는 조각이 따라 움직이게)
+  playMove(state: string, move: Move, duration: number, glowFirst = false, watch?: { from: number; to: number } | null, keep?: number[] | null): Promise<void> {
     this.cancelAnimation();
     const whole = wholeTurns(move);
     const face = whole ? 'U' : parseMove(move).face;
@@ -296,7 +355,7 @@ export class CubeScene {
       this.paint(state);
       this.arrows.forEach((arrow, row) => arrow.showAt({ normal: [0, 0, 1], offset: [0, 1 - row, 0], dir: [-1, 0, 0] }, turns));
     } else {
-      this.paint(state, face);
+      this.paint(state, keep ? null : face, keep);
       cubies = cubies.filter((cubie) => this.homes.get(cubie)!.dot(axis) > 0.5);
       if (glowFirst) this.outline.show(axis);
       else this.arrows[0].show(face, turns);
@@ -359,6 +418,7 @@ export class CubeScene {
   // 화면을 정리하고 자원을 해제한다
   dispose(): void {
     cancelAnimationFrame(this.frameId);
+    window.clearTimeout(this.flashTimer);
     this.cancelAnimation();
     this.resizeObserver.disconnect();
     const canvas = this.renderer.domElement;

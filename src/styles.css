@@ -144,6 +144,7 @@ button:focus-visible { outline: 4px solid #2f6bff; outline-offset: 2px; }
 .face-editor .edge.left { grid-area: 2 / 1; }
 .face-editor .edge.right { grid-area: 2 / 3; }
 .face-editor .edge.bottom { grid-area: 3 / 2; }
+.face-editor .edge.hidden { visibility: hidden; }
 .face-grid { grid-area: 2 / 2; display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; padding: 8px; background: var(--ink); border-radius: 24px; aspect-ratio: 1; }
 .face-cell { border: 0; border-radius: 14px; padding: 0; background: #b9c4d6; cursor: pointer; position: relative; }
 .face-cell:not(:disabled):active { transform: scale(0.94); }

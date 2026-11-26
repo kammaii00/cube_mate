@@ -5,14 +5,17 @@ import { boardsDone, loadRewards } from '../../rewards/store';
 import { Mascot } from '../../widgets/Mascot';
 import { outfitFor } from '../../widgets/outfits';
 import { useSay } from '../../voice/voice';
+import { HomeFriends } from '../course/HomeFriends';
 
 interface Props {
   onScan: () => void;
   onManual: () => void;
+  /** 꼬마 코스(큐브 배우기 섬)로 간다 */
+  onCourse: () => void;
 }
 
 // 스캔 또는 직접 칠하기로 시작하는 첫 화면을 그린다
-export function HomeScreen({ onScan, onManual }: Props) {
+export function HomeScreen({ onScan, onManual, onCourse }: Props) {
   const { t, lang, setLang } = useI18n();
   const say = useSay();
   /** 큐비를 한 번 누르면 "큐비를 눌러 봐!" 안내를 감춘다 (브라우저는 첫 터치 전엔 소리를 못 낸다) */
@@ -34,11 +37,16 @@ export function HomeScreen({ onScan, onManual }: Props) {
         </button>
         {!greeted && lang === 'ko' && <p className="tap-hint">👆 {t('cubiTapHint')}</p>}
         <h1>{t('appName')}</h1>
+        <HomeFriends />
         <p className="tagline">{t('tagline')}</p>
       </div>
       <div className="actions">
         <button className="btn primary big" onClick={onScan}>📷 {t('scanStart')}</button>
         <button className="btn big" onClick={onManual}>🎨 {t('manualStart')}</button>
+        <button className="btn sky big" onClick={onCourse}>
+          {t('homeCourse')}
+          <small className="btn-sub">{t('homeCourseFor')}</small>
+        </button>
       </div>
       <ol className="how">
         <li>{t('how1')}</li>
