@@ -13,6 +13,7 @@ import { stagePicture } from '../learn/frames';
 import { EditScreen } from '../edit/EditScreen';
 import { ScanScreen } from '../scan/ScanScreen';
 import { FaceCheck } from './FaceCheck';
+import { IslandTitle } from './IslandTitle';
 import { goalCard } from './guideText';
 import { MovePlayer } from './MovePlayer';
 import { PieceIntro, type SlideId } from './PieceIntro';
@@ -147,12 +148,11 @@ export function PracticeScreen({ island, stage, alone, review, onWin, onBack }: 
   // 직접 칠하기: 큐브 색을 다 칠하면 카메라로 보여 준 것과 똑같이 다음 조각 하나를 같이 한다
   if (phase === 'paint') return <EditScreen initialState={emptyState()} source="manual" onSolved={() => undefined} onReady={(state) => scanned(state)} onBack={() => setPhase(retry)} />;
 
-  const title = t(`island${island}Name` as MessageKey);
   return (
     <main className="screen guide course">
       <header className="topbar">
         <button className="link" onClick={phase === 'mix' || phase === 'work' ? onBack : () => setPhase(phase === 'before' ? 'mix' : retry)}>‹ {t('back')}</button>
-        <h2>{title}</h2>
+        <IslandTitle island={island} />
         <span />
       </header>
       {phase === 'mix' && (

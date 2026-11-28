@@ -2,24 +2,30 @@
 .course-step { text-align: center; font: 400 16px var(--display); color: var(--muted); }
 .course-tip { display: block; margin-top: 6px; color: var(--muted); }
 
-/* 섬 지도: 섬 카드를 점선 길로 위에서 아래로 잇는다 */
-.island-path { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 18px; position: relative; }
-.island-path::before { content: ''; position: absolute; left: 50px; top: 30px; bottom: 30px; border-left: 5px dashed rgba(27, 36, 64, 0.25); }
-.island {
-  position: relative; width: 100%; display: flex; align-items: center; gap: 14px; padding: 12px 14px;
-  border: 3px solid var(--ink); border-radius: 24px; background: #c9f1c0; box-shadow: 0 5px 0 var(--ink);
-  text-align: left; cursor: pointer;
+/* 섬 지도(바다 지도): 페이지 전체를 한 장면으로 — 위의 뒤로 버튼·말풍선은 하늘(고정), 그 아래는 화면 끝까지 바다.
+   지도에 있는 동안 CourseMap이 html에 at-sea를 붙인다 */
+html.at-sea { overflow-x: clip; }
+html.at-sea body { background: #8fd6f5 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='120'%3E%3Cpath d='M0 20 q10 -8 20 0 q10 8 20 0 M50 80 q10 -8 20 0 q10 8 20 0' stroke='%23b8e6fa' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); }
+.sea-top {
+  position: sticky; top: 0; z-index: 2; display: flex; flex-direction: column; gap: 10px;
+  margin: -14px calc(50% - 50vw) 0; padding: 14px calc(50vw - 50%) 22px;
+  background: linear-gradient(#bfe6ff, var(--sky));
 }
-.island.hidden { background: #e3e8f2; color: var(--muted); box-shadow: 0 5px 0 #9aa6c0; border-color: #9aa6c0; }
-.island.free { background: #fff4b8; }
-.island:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
-.island-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-.island-text b { font: 400 21px var(--display); }
-.island-text small { font-size: 15px; }
-.island-stars { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
-.island-stars i { font-style: normal; font-size: 22px; color: #c3cad8; }
-.island-stars i.on { color: #f5a400; text-shadow: 0 1px 0 var(--ink); }
-.island-stars em { font-style: normal; font-size: 13px; color: var(--muted); margin-left: 6px; }
+.sea-top::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 14px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='14'%3E%3Cpath d='M0 14 V8 q10 -10 20 0 q10 10 20 0 V14 z' fill='%238fd6f5'/%3E%3C/svg%3E") repeat-x; }
+.sea-top .move-title { font-size: 20px; word-break: keep-all; }
+.sea-map { margin: -14px -16px 0; }
+.sea-map svg { display: block; width: 100%; max-width: 430px; height: auto; margin: 0 auto; }
+.sea-island { cursor: pointer; outline: none; }
+.sea-island:active .sea-tap { transform: translateY(3px); }
+.sea-island:focus-visible .sea-hit { stroke: #fff; stroke-width: 3; stroke-dasharray: 8 6; }
+.sea-name { font: 400 21px var(--display); fill: var(--ink); }
+.sea-island.soon .sea-name { fill: var(--muted); }
+.sea-note { font: 400 14px var(--display); fill: var(--muted); }
+.sea-stars { font-size: 22px; fill: #fff; stroke: var(--ink); stroke-width: 0.8; }
+.sea-stars .on { fill: #f5a400; }
+.sea-pill { font: 400 15px var(--display); fill: var(--ink); }
+.sea-fog-mark { font: 400 40px var(--display); fill: #9aa6c0; }
+.sea-sparkle { font-size: 22px; }
 .friend.hidden { filter: blur(0.6px); }
 
 /* 결과 화면 */
@@ -109,5 +115,7 @@
 .level-title-card small { font: 400 18px var(--display); color: var(--muted); }
 .level-title-card strong { font: 400 40px/1.15 var(--display); text-align: center; word-break: keep-all; }
 .level-title-badge { padding: 4px 14px; border: 3px solid var(--ink); border-radius: 999px; background: var(--sun); font: 400 18px var(--display); }
-/* 준비 중인 다음 섬: 흑백 */
-.island.soon { background: #eceef2; color: var(--muted); border-color: #9aa6c0; box-shadow: 0 5px 0 #9aa6c0; filter: grayscale(1); }
+
+/* 섬 안 화면 제목: 섬 이름 옆에 지도와 같은 주제 팻말 그림 */
+.island-title { display: flex; align-items: center; justify-content: center; gap: 6px; min-width: 0; }
+.island-title .sign-icon { flex: none; }

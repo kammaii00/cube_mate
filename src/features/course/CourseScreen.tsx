@@ -7,6 +7,7 @@ import { recordSolve, type SolveReward } from '../../rewards/store';
 import { useSay } from '../../voice/voice';
 import { Bubble } from '../../widgets/Bubble';
 import { CourseMap } from './CourseMap';
+import { IslandTitle } from './IslandTitle';
 import { LevelPicker } from './LevelPicker';
 import { LevelTitle } from './LevelTitle';
 import { PieceIntro, type SlideId } from './PieceIntro';
@@ -14,6 +15,7 @@ import { PracticeScreen } from './PracticeScreen';
 import { PuzzleScreen } from './PuzzleScreen';
 import { QuizScreen } from './QuizScreen';
 import { ResultCard } from './ResultCard';
+import { useSeaBackground } from './useSeaBackground';
 import '../done/rewards.css';
 import './course.css';
 
@@ -46,6 +48,13 @@ const REVIEW: Record<number, SlideId[]> = {
   3: ['cornerDance1', 'cornerDanceMore', 'cornerBring'],
 };
 
+/** 단계 제목 카드 옵션 */
+interface TitleOptions {
+  nextUp?: boolean;
+  newIsland?: boolean;
+  sea?: boolean;
+}
+
 // 결과 뒤 "다음" 레벨: 방금 별을 받았으면 아직 별이 없는 첫 레벨, 아니면 같은 레벨 한 번 더
 function nextAfter(island: number, level: number, result: WinResult): number {
   const open = firstOpenLevel(result.data, island);
@@ -54,9 +63,10 @@ function nextAfter(island: number, level: number, result: WinResult): number {
 
 type Phase =
   | { name: 'map' }
-  | { name: 'pick'; island: number }
-  /** 새 단계 전에 제목을 크게 보여 주는 중 (nextUp: 결과 카드 "다음"으로 옴, newIsland: 처음 가는 섬) */
-  | { name: 'title'; island: number; level: number; nextUp: boolean; newIsland: boolean }
+  /** sea: 지도에서 와서 바다 위에서 고른다 (결과 카드에서 오면 섬 안이니 체크무늬) */
+  | { name: 'pick'; island: number; sea?: boolean }
+  /** 새 단계 전에 제목을 크게 보여 주는 중 (nextUp: 결과 카드 "다음"으로 옴, newIsland: 처음 가는 섬, sea: 지도에서 와서 바다 위에 띄움) */
+  | { name: 'title'; island: number; level: number } & TitleOptions
   | { name: 'intro'; island: number; level: number }
   /** review: 별을 이미 받은 빠른 레벨(퀴즈·화면 연습)을 복습 중일 때 이번 판에서 맞힌 수 (3개면 한 판 끝) */
   | { name: 'play'; island: number; level: number; no: number; review?: number }
@@ -71,6 +81,8 @@ export function CourseScreen({ onHome }: Props) {
   const [count, setCount] = useState(0);
   /** 지도 말풍선 문구 (준비 중인 섬을 누르면 바뀐다) */
   const [mapNote, setMapNote] = useState<MessageKey>('courseMapHello');
+  const sea = phase.name === 'map' || ((phase.name === 'title' || phase.name === 'pick') && !!phase.sea);
+  useSeaBackground(sea);
 
   // 지도에 오면 인사한다 (자주 반복하지 않게)
   useEffect(() => {
@@ -86,15 +98,15 @@ export function CourseScreen({ onHome }: Props) {
     say('courseSoonTap');
   }
 
-  // 지도에서 섬을 눌렀을 때: 별을 받은 레벨이 있으면 레벨을 고르고, 처음이면 바로 지금 레벨로 간다
+  // 지도에서 섬을 눌렀을 때: 별을 받은 레벨이 있으면 레벨을 고르고, 처음이면 바로 지금 레벨로 간다 (둘 다 바다 위에서 보여 준다)
   function enter(island: number) {
-    if (starsOf(data, island) > 0) return setPhase({ name: 'pick', island });
-    titled(island, currentLevel(data, island), false, data.wins[island].every((w) => w === 0));
+    if (starsOf(data, island) > 0) return setPhase({ name: 'pick', island, sea: true });
+    titled(island, currentLevel(data, island), { newIsland: data.wins[island].every((w) => w === 0), sea: true });
   }
 
-  // 다른 단계로 갈 때: 제목을 먼저 크게 보여 준 뒤 그 단계를 시작한다
-  function titled(island: number, level: number, nextUp = false, newIsland = false) {
-    setPhase({ name: 'title', island, level, nextUp, newIsland });
+  // 다른 단계로 갈 때: 제목을 먼저 크게 보여 준 뒤 그 단계를 시작한다 (지도·새 섬에서 오면 바다 위에서, 섬에 들어가는 느낌)
+  function titled(island: number, level: number, options: TitleOptions = {}) {
+    setPhase({ name: 'title', island, level, ...options });
   }
 
   // 그 레벨로 문제(퀴즈 하나 / 화면 연습 하나 / 진짜 큐브 연습 한 번)를 시작한다. 처음이면 소개부터
@@ -138,9 +150,9 @@ export function CourseScreen({ onHome }: Props) {
   function next(island: number, level: number, result: WinResult) {
     if (!result.rescued) {
       const to = nextAfter(island, level, result);
-      return to === level ? play(island, level) : titled(island, to, true);
+      return to === level ? play(island, level) : titled(island, to, { nextUp: true });
     }
-    if (island + 1 < ISLANDS.length) return titled(island + 1, currentLevel(result.data, island + 1), true, true);
+    if (island + 1 < ISLANDS.length) return titled(island + 1, currentLevel(result.data, island + 1), { nextUp: true, newIsland: true, sea: true });
     setPhase({ name: 'map' });
   }
 
@@ -158,22 +170,28 @@ export function CourseScreen({ onHome }: Props) {
     );
 
   const island = phase.name === 'map' ? null : phase.island;
+  const header = (
+    <header className="topbar">
+      <button className="link" onClick={phase.name === 'map' ? onHome : () => setPhase({ name: 'map' })}>‹ {t('back')}</button>
+      {island === null ? <h2>{t('courseTitle')}</h2> : <IslandTitle island={island} />}
+      <span />
+    </header>
+  );
   return (
     <main className="screen guide course">
-      <header className="topbar">
-        <button className="link" onClick={phase.name === 'map' ? onHome : () => setPhase({ name: 'map' })}>‹ {t('back')}</button>
-        <h2>{island === null ? t('courseTitle') : t(`island${island}Name` as MessageKey)}</h2>
-        <span />
-      </header>
-      {phase.name === 'map' && (
-        <>
-          <Bubble><strong className="move-title">{t(mapNote)}</strong></Bubble>
-          <CourseMap data={data} onPick={enter} onLocked={() => say('courseLocked')} onSoon={soon} />
-        </>
+      {sea ? (
+        // 바다 장면: 위는 하늘 띠(바다 지도를 내려도 뒤로 버튼과 큐비 말풍선은 위에 남는다)
+        <div className="sea-top">
+          {header}
+          {phase.name === 'map' && <Bubble><strong className="move-title">{t(mapNote)}</strong></Bubble>}
+        </div>
+      ) : (
+        header
       )}
-      {phase.name === 'pick' && <LevelPicker data={data} island={phase.island} onPick={(level) => titled(phase.island, level)} />}
+      {phase.name === 'map' && <CourseMap data={data} onPick={enter} onLocked={() => say('courseLocked')} onSoon={soon} />}
+      {phase.name === 'pick' && <LevelPicker data={data} island={phase.island} onPick={(level) => titled(phase.island, level, { sea: phase.sea })} />}
       {phase.name === 'title' && (
-        <LevelTitle island={phase.island} level={phase.level} nextUp={phase.nextUp} newIsland={phase.newIsland} onDone={() => play(phase.island, phase.level)} />
+        <LevelTitle island={phase.island} level={phase.level} nextUp={!!phase.nextUp} newIsland={!!phase.newIsland} onDone={() => play(phase.island, phase.level)} />
       )}
       {phase.name === 'intro' && <PieceIntro slides={INTRO[introId(phase.island, phase.level)]} onDone={() => introDone(phase.island, phase.level)} />}
       {phase.name === 'play' && puzzleOf(ISLANDS[phase.island], phase.level) && (
