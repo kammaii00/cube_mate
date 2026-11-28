@@ -111,4 +111,3 @@
 .level-title-badge { padding: 4px 14px; border: 3px solid var(--ink); border-radius: 999px; background: var(--sun); font: 400 18px var(--display); }
 /* 준비 중인 다음 섬: 흑백 */
 .island.soon { background: #eceef2; color: var(--muted); border-color: #9aa6c0; box-shadow: 0 5px 0 #9aa6c0; filter: grayscale(1); }
-.soon-icon { width: 64px; height: 64px; flex: none; display: flex; align-items: center; justify-content: center; font-size: 40px; opacity: 0.6; }

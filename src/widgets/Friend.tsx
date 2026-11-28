@@ -10,6 +10,8 @@ interface Props {
   look: 'hidden' | 'caged' | 'free';
   /** 갇혀 있을 때 남은 창살 수 (레벨을 깰 때마다 하나씩 사라진다) */
   bars?: number;
+  /** 물음표 친구에도 창살을 그린다 (아직 준비 중인 섬의 친구) */
+  cagedHidden?: boolean;
 }
 
 // 조각 모양에 맞게 스티커 칸(x, y, 너비, 높이, 색)을 정한다
@@ -20,7 +22,7 @@ function stickers(shape: FriendShape, colors: Face[]): [number, number, number, 
 }
 
 // 친구 하나를 SVG로 그린다
-export function Friend({ shape, colors, size = 72, look, bars = 0 }: Props) {
+export function Friend({ shape, colors, size = 72, look, bars = 0, cagedHidden = false }: Props) {
   const hidden = look === 'hidden';
   return (
     <svg className={`friend ${look}`} width={size} height={size} viewBox="0 0 100 100" aria-hidden="true">
@@ -29,7 +31,7 @@ export function Friend({ shape, colors, size = 72, look, bars = 0 }: Props) {
         <rect key={i} x={x} y={y} width={w} height={h} rx="8" fill={FACE_COLORS[face]} />
       ))}
       {hidden ? (
-        <text x="50" y="66" textAnchor="middle" fontSize="46" fontWeight="700" fill="#fff">?</text>
+        !cagedHidden && <text x="50" y="66" textAnchor="middle" fontSize="46" fontWeight="700" fill="#fff">?</text>
       ) : (
         <>
           <circle cx="36" cy="40" r="5" fill="#1b2440" />
@@ -37,9 +39,11 @@ export function Friend({ shape, colors, size = 72, look, bars = 0 }: Props) {
           <path d={look === 'free' ? 'M40 62 Q50 72 60 62' : 'M41 68 Q50 61 59 68'} fill="none" stroke="#1b2440" strokeWidth="4" strokeLinecap="round" />
         </>
       )}
-      {look === 'caged' && Array.from({ length: bars }, (_, i) => (
+      {(look === 'caged' || (hidden && cagedHidden)) && Array.from({ length: bars }, (_, i) => (
         <rect key={i} x={22 + i * 24} y="0" width="8" height="100" rx="4" fill="#55627f" opacity="0.85" />
       ))}
+      {/* 준비 중인 섬의 친구: 물음표가 창살에 가리지 않게 창살 위에 그린다 */}
+      {hidden && cagedHidden && <text x="50" y="66" textAnchor="middle" fontSize="46" fontWeight="700" fill="#fff">?</text>}
     </svg>
   );
 }

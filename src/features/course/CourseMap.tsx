@@ -50,7 +50,7 @@ export function CourseMap({ data, onPick, onLocked, onSoon }: Props) {
       {Array.from({ length: SOON_ISLANDS }, (_, k) => (
         <li key={`soon${k}`}>
           <button className="island soon" onClick={onSoon}>
-            <span className="soon-icon" aria-hidden>🏝</span>
+            <Friend shape="center" colors={['U']} look="hidden" bars={3} cagedHidden size={64} />
             <span className="island-text">
               <b>{t(`soonIsland${k}` as MessageKey)}</b>
               <small>{t('courseSoon')}</small>

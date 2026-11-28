@@ -121,6 +121,8 @@ describe('같이 해 보기 목표·이유', () => {
     left.forEach((p) => {
       new Set(p.chunks).forEach((c) => c.dance && expect(c.moves.length).toBe(c.reps * 4));
       const view = goalView(p.start, p.piece, p.slot, 2);
+      // 제자리에 거꾸로 낀 조각은 자리를 칠하지 않고 실제 색을 보여 준다 (따로 테스트)
+      if (view.stuck) return;
       p.slot.forEach((i) => expect(view.state[i]).toBe('S'));
       expect(view.highlight).toEqual(expect.arrayContaining([...p.piece, ...p.slot]));
     });

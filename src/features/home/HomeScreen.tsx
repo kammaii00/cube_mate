@@ -40,7 +40,7 @@ export function HomeScreen({ onScan, onManual, onCourse }: Props) {
         <button className="mascot-btn" onClick={greet} aria-label={t('cubiTapHint')}>
           <Mascot size={132} outfit={outfitFor(boardsDone(loadRewards().solves))} />
         </button>
-        {!greeted && lang === 'ko' && <p className="tap-hint">👆 {t('cubiTapHint')}</p>}
+        {!greeted && <p className="tap-hint">👆 {t('cubiTapHint')}</p>}
         <h1>{t('appName')}</h1>
         <HomeFriends />
         <p className="tagline">{t('tagline')}</p>

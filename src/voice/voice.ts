@@ -1,5 +1,5 @@
-// 큐비 음성 재생기: public/voice/<이름>.mp3 를 순서대로 틀고, 마지막으로 한 말을 기억해 다시 들려준다.
-// 녹음은 한국어만 있어서 한국어일 때만 소리를 낸다. 파일이 없거나 재생이 막히면 조용히 넘어간다.
+// 큐비 음성 재생기: public/voice/<이름>.mp3(한국어) 또는 public/voice/en/<이름>.mp3(영어)를 순서대로 틀고,
+// 마지막으로 한 말을 기억해 다시 들려준다. 파일이 없거나 재생이 막히면 조용히 넘어간다.
 import { useCallback } from 'react';
 import { useI18n } from '../i18n';
 
@@ -20,6 +20,8 @@ const PAUSE_MS = 1000;
 type StartListener = (name: string, audio: HTMLAudioElement) => void;
 const startListeners = new Set<StartListener>();
 
+/** 음성 파일 폴더: 한국어는 public/voice/, 영어는 public/voice/en/ */
+let voiceDir = '';
 let current: HTMLAudioElement | null = null;
 let currentName: string | null = null;
 let pauseTimer: ReturnType<typeof setTimeout> | null = null;
@@ -45,7 +47,7 @@ function playNext(): void {
   }
   lastAt.set(name, Date.now());
   try {
-    const audio = new Audio(`/voice/${name}.mp3`);
+    const audio = new Audio(`/voice/${voiceDir}${name}.mp3`);
     current = audio;
     startListeners.forEach((listener) => listener(name, audio));
     audio.onended = playNext;
@@ -67,6 +69,11 @@ function playNext(): void {
 export function onVoiceStart(listener: StartListener): () => void {
   startListeners.add(listener);
   return () => startListeners.delete(listener);
+}
+
+// 어느 언어 녹음을 틀지 정한다 (화면 언어를 따른다)
+export function setVoiceLang(lang: 'ko' | 'en'): void {
+  voiceDir = lang === 'en' ? 'en/' : '';
 }
 
 // 지금 말하는 중인지 알려준다
@@ -119,10 +126,11 @@ export function replayVoice(): void {
   }
 }
 
-// 화면에서 쓰는 말하기 함수: 한국어일 때만 소리를 낸다
+// 화면에서 쓰는 말하기 함수: 지금 화면 언어의 녹음으로 말한다
 export function useSay(): (names: string | string[], options?: SayOptions) => void {
   const { lang } = useI18n();
   return useCallback((names, options) => {
-    if (lang === 'ko') say(names, options);
+    setVoiceLang(lang);
+    say(names, options);
   }, [lang]);
 }
