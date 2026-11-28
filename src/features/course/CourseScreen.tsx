@@ -69,12 +69,22 @@ export function CourseScreen({ onHome }: Props) {
   const [data, setData] = useState(loadCourse);
   const [phase, setPhase] = useState<Phase>({ name: 'map' });
   const [count, setCount] = useState(0);
+  /** 지도 말풍선 문구 (준비 중인 섬을 누르면 바뀐다) */
+  const [mapNote, setMapNote] = useState<MessageKey>('courseMapHello');
 
   // 지도에 오면 인사한다 (자주 반복하지 않게)
   useEffect(() => {
-    if (phase.name === 'map') say('courseMapHello', { cooldown: 60000 });
+    if (phase.name !== 'map') return;
+    setMapNote('courseMapHello');
+    say('courseMapHello', { cooldown: 60000 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase.name]);
+
+  // 준비 중인 섬을 눌렀을 때: 말풍선과 음성으로 곧 열린다고 알려 준다
+  function soon() {
+    setMapNote('courseSoonTap');
+    say('courseSoonTap');
+  }
 
   // 지도에서 섬을 눌렀을 때: 별을 받은 레벨이 있으면 레벨을 고르고, 처음이면 바로 지금 레벨로 간다
   function enter(island: number) {
@@ -157,8 +167,8 @@ export function CourseScreen({ onHome }: Props) {
       </header>
       {phase.name === 'map' && (
         <>
-          <Bubble><strong className="move-title">{t('courseMapHello')}</strong></Bubble>
-          <CourseMap data={data} onPick={enter} onLocked={() => say('courseLocked')} />
+          <Bubble><strong className="move-title">{t(mapNote)}</strong></Bubble>
+          <CourseMap data={data} onPick={enter} onLocked={() => say('courseLocked')} onSoon={soon} />
         </>
       )}
       {phase.name === 'pick' && <LevelPicker data={data} island={phase.island} onPick={(level) => titled(phase.island, level)} />}
