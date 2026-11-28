@@ -1,7 +1,8 @@
 // 문제를 풀었을 때의 결과: 칭찬, 이번 레벨의 별 진행, 별을 받았거나 친구를 구했으면 큰 축하 창(스티커판·큐비 변신)
 import { useEffect, useState } from 'react';
+import { STAR_SOUND_DELAY, playStarWin } from '../../voice/sfx';
 import { WINS_PER_LEVEL, ISLANDS } from '../../course/skills';
-import type { WinResult } from '../../course/progress';
+import { currentLevel, firstOpenLevel, type WinResult } from '../../course/progress';
 import { useI18n, type MessageKey } from '../../i18n';
 import type { SolveReward } from '../../rewards/store';
 import { boardsDone } from '../../rewards/store';
@@ -54,14 +55,21 @@ export function ResultCard({ island, level, helped, counted, result, sticker, re
   const stars = result.data.wins[island].map((w) => w >= WINS_PER_LEVEL);
   const wins = Math.min(WINS_PER_LEVEL, result.data.wins[island][level]);
   const left = WINS_PER_LEVEL - wins;
-  /** 별 소식: 방금 받았으면 "별 받았다!", 아직이면 "한 번만 더 하면 별!" 같은 남은 횟수 (복습은 없음) */
+  /** 별 소식: 방금 받았으면 "별을 받았어!", 아직이면 "한 번만 더 하면 별!" 같은 남은 횟수 (복습은 없음) */
   const starNews: MessageKey | null = result.star ? 'courseStar' : review || !left ? null : (`courseLeft${left}` as MessageKey);
-  const nextLevel = result.star && !result.rescued && level + 1 < info.levels.length;
   const last = island === ISLANDS.length - 1;
+  /** 다음 버튼이 보낼 곳: 별을 받았으면 별 없는 첫 레벨, 섬을 다 깼으면 다음 섬 (그림을 버튼에 넣는다) */
+  const open = result.star && !result.rescued ? firstOpenLevel(result.data, island) : -1;
+  const nextIsland = result.rescued && !last;
+  const target = open >= 0 ? { island, level: open } : nextIsland ? { island: island + 1, level: currentLevel(result.data, island + 1) } : null;
+  const label: MessageKey = nextIsland ? 'courseNextIsland' : open >= 0 ? 'courseNextLevel' : 'courseNext';
 
-  // 카드가 열리면 칭찬 → (별) → (구출) 순으로 말해 준다
+  // 카드가 열리면 칭찬 → (별) → (구출) 순으로 말해 주고, 별을 받았으면 큰 별이 튀어나올 때 반짝 소리를 낸다
   useEffect(() => {
     say([praise, ...(starNews ? [starNews] : []), ...(result.rescued ? [`courseRescued${island}`] : [])]);
+    if (!result.star) return;
+    const timer = setTimeout(playStarWin, STAR_SOUND_DELAY);
+    return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -103,10 +111,12 @@ export function ResultCard({ island, level, helped, counted, result, sticker, re
           <span>{stars.map((on, k) => <span key={k} className={k === level ? 'new' : ''}><StarIcon filled={on} size={32} /></span>)}</span>
         </div>
       )}
-      <button className={`btn primary big${nextLevel ? ' next-btn' : ''}`} onClick={onNext}>
-        {nextLevel && <LevelPicture island={island} level={level + 1} scale={0.62} />}
-        {t(nextLevel ? 'courseNextLevel' : 'courseNext')}
-      </button>
+      {!(result.rescued && last) && (
+        <button className={`btn primary big${target ? ' next-btn' : ''}`} onClick={onNext}>
+          {target && <LevelPicture island={target.island} level={target.level} scale={0.62} />}
+          {t(label)}
+        </button>
+      )}
       {review && onLevels && <button className="btn big" onClick={onLevels}>{t('courseOtherLevel')}</button>}
       <button className="btn big" onClick={onMap}>{t('courseMap')}</button>
       {popup && (

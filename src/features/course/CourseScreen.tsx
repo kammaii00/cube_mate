@@ -1,6 +1,6 @@
 // 꼬마 코스(큐브 배우기 섬) 화면: 섬 지도 → 조각 알기 퀴즈 / 진짜 섞은 큐브 연습 → 결과(별·친구 구출)를 오간다
 import { useEffect, useState } from 'react';
-import { currentLevel, loadCourse, markIntro, recordWin, starsOf, type WinResult } from '../../course/progress';
+import { currentLevel, firstOpenLevel, loadCourse, markIntro, recordWin, starsOf, type WinResult } from '../../course/progress';
 import { ISLANDS, WINS_PER_LEVEL, isQuick, practiceLevel, puzzleOf } from '../../course/skills';
 import { useI18n, type MessageKey } from '../../i18n';
 import { recordSolve, type SolveReward } from '../../rewards/store';
@@ -8,6 +8,7 @@ import { useSay } from '../../voice/voice';
 import { Bubble } from '../../widgets/Bubble';
 import { CourseMap } from './CourseMap';
 import { LevelPicker } from './LevelPicker';
+import { LevelTitle } from './LevelTitle';
 import { PieceIntro, type SlideId } from './PieceIntro';
 import { PracticeScreen } from './PracticeScreen';
 import { PuzzleScreen } from './PuzzleScreen';
@@ -45,14 +46,17 @@ const REVIEW: Record<number, SlideId[]> = {
   3: ['cornerDance1', 'cornerDanceMore', 'cornerBring'],
 };
 
-// 결과 뒤 "다음" 레벨: 방금 별을 받았고 다음 레벨이 있으면 다음, 아니면 같은 레벨 한 번 더
+// 결과 뒤 "다음" 레벨: 방금 별을 받았으면 아직 별이 없는 첫 레벨, 아니면 같은 레벨 한 번 더
 function nextAfter(island: number, level: number, result: WinResult): number {
-  return result.star && level + 1 < ISLANDS[island].levels.length ? level + 1 : level;
+  const open = firstOpenLevel(result.data, island);
+  return result.star && open >= 0 ? open : level;
 }
 
 type Phase =
   | { name: 'map' }
   | { name: 'pick'; island: number }
+  /** 새 단계 전에 제목을 크게 보여 주는 중 (nextUp: 결과 카드 "다음"으로 옴, newIsland: 처음 가는 섬) */
+  | { name: 'title'; island: number; level: number; nextUp: boolean; newIsland: boolean }
   | { name: 'intro'; island: number; level: number }
   /** review: 별을 이미 받은 빠른 레벨(퀴즈·화면 연습)을 복습 중일 때 이번 판에서 맞힌 수 (3개면 한 판 끝) */
   | { name: 'play'; island: number; level: number; no: number; review?: number }
@@ -75,7 +79,12 @@ export function CourseScreen({ onHome }: Props) {
   // 지도에서 섬을 눌렀을 때: 별을 받은 레벨이 있으면 레벨을 고르고, 처음이면 바로 지금 레벨로 간다
   function enter(island: number) {
     if (starsOf(data, island) > 0) return setPhase({ name: 'pick', island });
-    play(island, currentLevel(data, island));
+    titled(island, currentLevel(data, island), false, data.wins[island].every((w) => w === 0));
+  }
+
+  // 다른 단계로 갈 때: 제목을 먼저 크게 보여 준 뒤 그 단계를 시작한다
+  function titled(island: number, level: number, nextUp = false, newIsland = false) {
+    setPhase({ name: 'title', island, level, nextUp, newIsland });
   }
 
   // 그 레벨로 문제(퀴즈 하나 / 화면 연습 하나 / 진짜 큐브 연습 한 번)를 시작한다. 처음이면 소개부터
@@ -114,6 +123,17 @@ export function CourseScreen({ onHome }: Props) {
     setPhase({ name: 'result', island, level, helped, counted, result, sticker: result.rescued ? recordSolve() : null });
   }
 
+  // 결과 카드의 다음 버튼: 섬을 다 깼으면 다음 섬의 할 레벨로(마지막 섬이면 지도), 아니면 다음 레벨이나 한 번 더
+  // 같은 레벨을 한 번 더 할 때는 제목 없이 바로 시작한다
+  function next(island: number, level: number, result: WinResult) {
+    if (!result.rescued) {
+      const to = nextAfter(island, level, result);
+      return to === level ? play(island, level) : titled(island, to, true);
+    }
+    if (island + 1 < ISLANDS.length) return titled(island + 1, currentLevel(result.data, island + 1), true, true);
+    setPhase({ name: 'map' });
+  }
+
   if (phase.name === 'play' && !isQuick(ISLANDS[phase.island], phase.level))
     return (
       <PracticeScreen
@@ -141,7 +161,10 @@ export function CourseScreen({ onHome }: Props) {
           <CourseMap data={data} onPick={enter} onLocked={() => say('courseLocked')} />
         </>
       )}
-      {phase.name === 'pick' && <LevelPicker data={data} island={phase.island} onPick={(level) => play(phase.island, level)} />}
+      {phase.name === 'pick' && <LevelPicker data={data} island={phase.island} onPick={(level) => titled(phase.island, level)} />}
+      {phase.name === 'title' && (
+        <LevelTitle island={phase.island} level={phase.level} nextUp={phase.nextUp} newIsland={phase.newIsland} onDone={() => play(phase.island, phase.level)} />
+      )}
       {phase.name === 'intro' && <PieceIntro slides={INTRO[introId(phase.island, phase.level)]} onDone={() => introDone(phase.island, phase.level)} />}
       {phase.name === 'play' && puzzleOf(ISLANDS[phase.island], phase.level) && (
         <PuzzleScreen
@@ -174,7 +197,7 @@ export function CourseScreen({ onHome }: Props) {
             sticker={phase.sticker}
             review={phase.review}
             onLevels={() => setPhase({ name: 'pick', island: phase.island })}
-            onNext={() => (phase.result.rescued ? setPhase({ name: 'map' }) : play(phase.island, nextAfter(phase.island, phase.level, phase.result)))}
+            onNext={() => next(phase.island, phase.level, phase.result)}
             onMap={() => setPhase({ name: 'map' })}
           />
         </>

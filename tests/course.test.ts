@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { SOLVED } from '../src/core/faces';
 import { applyMoves, flipUpsideDown } from '../src/core/moves';
 import { randomState } from '../src/core/scramble';
-import { checkFace, nextPiece, remainingPieces } from '../src/course/practice';
+import { goalView } from '../src/course/guide';
+import { betweenView, checkFace, nextPiece, remainingCells, remainingPieces, sameStage } from '../src/course/practice';
 import { daisyBase, isDaisy, makePetal } from '../src/course/petal';
 import { makePuzzle } from '../src/course/makePuzzle';
 import { DANCE, nextButton, press } from '../src/course/puzzle';
@@ -56,13 +57,106 @@ describe('큐비가 알려 줄 다음 조각', () => {
     expect(first.moves.length).toBe(first.chunks.length);
     expect(nextPiece({ start: SOLVED, moves: [], missions: [] }, 0)).toBeNull();
   });
-  it('남은 조각들은 이어지고, 마지막 조각까지 하면 흰 꽃이 된다', () => {
-    const sol = solveBeginner(randomState());
+  it('남은 조각들은 이어지고, 마지막 조각까지 하면 흰 꽃이 된다 (흰 꽃 섬은 꽃을 꼭 완성)', () => {
+    const sol = solveBeginner(randomState(), { fullDaisy: true });
     const left = remainingPieces({ start: sol.start, moves: sol.moves, missions: sol.missions }, 0);
     expect(left.length).toBeGreaterThan(0);
     left.slice(1).forEach((p, i) => expect(p.start).toBe(applyMoves(left[i].start, left[i].moves)));
     const last = left[left.length - 1];
     expect(isDaisy(applyMoves(last.start, last.moves))).toBe(true);
+  });
+  it('남은 조각 칸: 그 시작 모습에서 같은 단계에 남은 조각마다 같은 색의 모서리 칸 2개', () => {
+    const sol = solveBeginner(randomState());
+    const left = remainingPieces({ start: sol.start, moves: sol.moves, missions: sol.missions }, 1);
+    const cells = remainingCells(left, 1);
+    expect(cells.length).toBe(sameStage(left, 1).length * 2);
+    if (left.length > 1) expect(cells.some((i) => left[1].start[i] === 'U')).toBe(true);
+  });
+  it('흰 꽃 쉬는 화면: 이미 올린 꽃잎과 노란 가운데는 밝게, 빈 꽃잎 자리는 테두리', () => {
+    const sol = solveBeginner(randomState(), { fullDaisy: true });
+    const left = remainingPieces({ start: sol.start, moves: sol.moves, missions: sol.missions }, 0);
+    if (left.length < 2) return;
+    const view = betweenView(left, 1);
+    const s = left[1].start;
+    view.highlight.forEach((i) => expect(s[i]).not.toBe('U'));
+    expect(view.bright).toContain(4);
+    expect(view.highlight.length + (view.bright.length - 1) / 2).toBe(4);
+  });
+});
+
+describe('같이 해 보기 단계 나누기', () => {
+  it('조각마다 단계가 붙고, 단계 순서(흰 꽃 → 흰 십자 → 1층)대로 이어진다', () => {
+    const sol = solveBeginner(randomState(), { fullDaisy: false });
+    const left = remainingPieces({ start: sol.start, moves: sol.moves, missions: sol.missions }, 2);
+    expect(new Set(left.map((p) => p.stage))).toEqual(new Set([0, 1, 2]));
+    left.slice(1).forEach((p, i) => expect(p.stage).toBeGreaterThanOrEqual(left[i].stage));
+    left.forEach((p, i) => expect(sameStage(left, i).every((q) => q.stage === p.stage)).toBe(true));
+  });
+  it('흰 꽃을 먼저 만들어 두면 흰 꽃 조각은 남지 않는다', () => {
+    const daisy = solveBeginner(randomState(), { fullDaisy: true });
+    const firstCross = daisy.missions.findIndex((m) => m.stage === 1);
+    const made = applyMoves(daisy.start, daisy.missions.slice(0, firstCross).flatMap((m) => m.chunks.flatMap((c) => c.moves)));
+    const sol = solveBeginner(flipUpsideDown(made), { fullDaisy: true });
+    const left = remainingPieces({ start: sol.start, moves: sol.moves, missions: sol.missions }, 1);
+    expect(left.length).toBeGreaterThan(0);
+    expect(left.every((p) => p.stage === 1)).toBe(true);
+  });
+});
+
+describe('같이 해 보기 목표·이유', () => {
+  it('흰 꽃: 묶음은 회전마다 붙고, 마지막 묶음에서 꽃잎이 올라가며, 갈 자리에 그 조각이 놓인다', () => {
+    const sol = solveBeginner(randomState(), { fullDaisy: true });
+    const left = remainingPieces({ start: sol.start, moves: sol.moves, missions: sol.missions }, 0);
+    left.forEach((p) => {
+      expect(p.chunks.length).toBe(p.moves.length);
+      expect(['petalSide', 'petalBottom']).toContain(p.chunks[p.chunks.length - 1].why);
+      const end = applyMoves(p.start, p.moves);
+      expect(p.slot.map((i) => end[i]).sort().join()).toBe(p.piece.map((i) => p.start[i]).sort().join());
+      expect(p.slot.some((i) => [1, 3, 5, 7].includes(i) && end[i] === 'U')).toBe(true);
+    });
+  });
+  it('1층: 오른손 춤 묶음은 춤 횟수만큼 회전이 있고, 목표 그림은 갈 자리를 하늘색으로 칠한다', () => {
+    const sol = solveBeginner(randomState(), { oneDance: true });
+    const left = remainingPieces({ start: sol.start, moves: sol.moves, missions: sol.missions }, 2).filter((p) => p.slot.length === 3);
+    left.forEach((p) => {
+      new Set(p.chunks).forEach((c) => c.dance && expect(c.moves.length).toBe(c.reps * 4));
+      const view = goalView(p.start, p.piece, p.slot, 2);
+      p.slot.forEach((i) => expect(view.state[i]).toBe('S'));
+      expect(view.highlight).toEqual(expect.arrayContaining([...p.piece, ...p.slot]));
+    });
+  });
+});
+
+describe('흰 십자 목표 카드', () => {
+  it('반짝이는 곳은 꽃잎과 자리뿐이고, 꽃잎 옆 색은 자리 위 가운데 색과 같으며, 꽃잎은 윗면에 보인다', () => {
+    for (let k = 0; k < 30; k++) {
+      const sol = solveBeginner(randomState(), { fullDaisy: true });
+      remainingPieces({ start: sol.start, moves: sol.moves, missions: sol.missions }, 1).filter((p) => p.stage === 1).forEach((p) => {
+        const view = goalView(p.start, p.piece, p.slot, 1);
+        expect(view.highlight.sort()).toEqual([...p.piece, ...p.slot].sort());
+        expect(['R', 'F', 'L', 'B']).toContain(view.side);
+        expect(p.slot.some((i) => p.start[Math.floor(i / 9) * 9 + 4] === view.side)).toBe(true);
+        expect(p.piece.some((i) => i < 9 && p.start[i] === 'U')).toBe(true);
+      });
+    }
+  });
+});
+
+describe('자리에 거꾸로 있는 조각', () => {
+  it('조각이 자기 자리에 있으면 하늘색으로 덮지 않고 조각만 반짝인다', () => {
+    let seen = 0;
+    for (let k = 0; k < 60; k++) {
+      const sol = solveBeginner(randomState(), { oneDance: true });
+      remainingPieces({ start: sol.start, moves: sol.moves, missions: sol.missions }, 2).forEach((p) => {
+        const view = goalView(p.start, p.piece, p.slot, p.stage);
+        if (!view.stuck) return;
+        seen++;
+        expect(view.state).toBe(p.start);
+        expect(view.highlight).toEqual(p.piece);
+        expect(view.slot).toEqual([]);
+      });
+    }
+    expect(seen).toBeGreaterThan(0);
   });
 });
 
@@ -128,10 +222,14 @@ describe('흰 십자 화면 연습', () => {
 });
 
 describe('1층 화면 연습 (오른손 춤)', () => {
-  it('춤 한 번은 1번, 여러 번은 춤만 3·5번, 데려오기는 윗면을 먼저 돌린다', () => {
+  it('춤 한 번은 동작 4개를 순서대로, 여러 번은 춤만 3·5번, 데려오기는 윗면을 먼저 돌린다', () => {
     const rand = seeded(5);
     for (let i = 0; i < 30; i++) {
-      expect(followHints('dance1', rand).steps).toEqual([1, 0]);
+      // 춤 한 번: 버튼이 춤의 네 동작이고, 그 순서대로 누르면 꼭짓점이 들어간다
+      const one = makePuzzle('dance1', rand);
+      expect(one.buttons).toEqual(DANCE);
+      expect(one.guided).toBe(true);
+      expect(one.goal(applyMoves(one.state, DANCE))).toBe(true);
       const more = makePuzzle('danceMore', rand);
       let s = more.state;
       const steps = [more.distance(s)];

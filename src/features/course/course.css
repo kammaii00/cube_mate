@@ -56,6 +56,7 @@
 .move-grid.n6 svg { width: 48px; height: 48px; }
 .move-grid.n6 .move-btn { padding: 4px 2px; }
 /* 1층 화면 연습: 윗면 두 버튼 + 넓은 오른손 춤 버튼 */
+.move-grid.n1 { grid-template-columns: 1fr; }
 .move-grid.n3 { grid-template-columns: 1fr 1fr 2fr; }
 .dance-icons { display: flex; gap: 0; }
 .move-btn.dance { justify-content: center; }
@@ -86,3 +87,25 @@
 .result-stars span { display: flex; gap: 6px; align-items: center; }
 .result-stars .new { transform: scale(1.25); filter: drop-shadow(0 0 6px var(--sun)); animation: win-pop 0.6s ease-out 1.2s both; }
 .next-btn { display: flex; align-items: center; justify-content: center; gap: 10px; }
+
+/* 소개 화면 큐브 오른쪽 아래의 다시 보기 버튼 */
+.intro-replay { position: absolute; right: 6px; bottom: 6px; z-index: 1; width: 52px; height: 52px; border-radius: 50%; border: 3px solid var(--ink); background: #fff; font-size: 28px; line-height: 1; color: var(--ink); box-shadow: 0 3px 0 var(--ink); cursor: pointer; }
+.intro-replay:active { transform: translateY(3px); box-shadow: none; }
+
+/* 같이 해 보기: 이유 아래 작은 회전 안내, 배운 방법 버튼, 오른손 춤 4칸 줄 */
+.move-sub { display: block; margin-top: 4px; font: 400 15px var(--display); color: var(--ink); opacity: 0.75; }
+.how-to { display: block; margin-top: 6px; padding: 0; border: 0; background: none; font: 400 14px var(--display); color: #2a6fb0; text-decoration: underline; cursor: pointer; text-align: left; }
+.dance-strip { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.dance-step { display: flex; flex-direction: column; align-items: center; padding: 2px 4px; border: 2px solid transparent; border-radius: 10px; opacity: 0.5; }
+.dance-step small { font: 400 12px var(--display); }
+.dance-step.done { opacity: 0.8; }
+.dance-step.now { opacity: 1; border-color: var(--ink); background: #fff4b8; animation: btn-glow 1s ease-in-out infinite; }
+.dance-round { font: 400 13px var(--display); color: var(--ink); }
+/* 단계 제목: 새 단계 전에 가운데에 크게 떴다가 사라진다 */
+@keyframes title-pop { 0% { transform: scale(0.5); opacity: 0; } 65% { transform: scale(1.08); opacity: 1; } 100% { transform: scale(1); } }
+.level-title { flex: 1; min-height: 62dvh; width: 100%; display: flex; align-items: center; justify-content: center; padding: 0; border: 0; background: none; color: var(--ink); transition: opacity 0.35s ease, transform 0.35s ease; }
+.level-title.leaving { opacity: 0; transform: scale(0.94); }
+.level-title-card { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; padding: 28px 18px; border: 3px solid var(--ink); border-radius: 28px; background: var(--paper); box-shadow: 0 6px 0 var(--ink); animation: title-pop 0.5s ease-out; }
+.level-title-card small { font: 400 18px var(--display); color: var(--muted); }
+.level-title-card strong { font: 400 40px/1.15 var(--display); text-align: center; word-break: keep-all; }
+.level-title-badge { padding: 4px 14px; border: 3px solid var(--ink); border-radius: 999px; background: var(--sun); font: 400 18px var(--display); }

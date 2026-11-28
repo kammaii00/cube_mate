@@ -15,13 +15,18 @@ interface Props {
   onPick: (level: number) => void;
 }
 
-// 레벨 이름: 퀴즈는 "모서리 찾기"처럼 하는 일, 화면 연습은 "옆 꽃잎 올리기" 등, 진짜 연습은 "같이 해 보기 / 혼자 해 보기"
-export function levelName(island: number, level: number, t: Translate): string {
+// 레벨 이름의 문구 키 (= 음성 파일 이름): 퀴즈는 "모서리 찾기"처럼 하는 일, 화면 연습은 "옆 꽃잎 올리기" 등, 진짜 연습은 "같이 해 보기 / 혼자 해 보기"
+export function levelKey(island: number, level: number): MessageKey {
   const info = ISLANDS[island];
-  if (info.kind === 'quiz') return t(`courseQuiz${level}` as MessageKey);
+  if (info.kind === 'quiz') return `courseQuiz${level}` as MessageKey;
   const puzzle = puzzleOf(info, level);
-  if (puzzle) return t(`coursePuzzle_${puzzle}` as MessageKey);
-  return t(practiceLevel(info, level).together ? 'courseTogether' : 'courseAlone');
+  if (puzzle) return `coursePuzzle_${puzzle}` as MessageKey;
+  return practiceLevel(info, level).together ? 'courseTogether' : 'courseAlone';
+}
+
+// 레벨 이름을 지금 언어로 돌려준다
+export function levelName(island: number, level: number, t: Translate): string {
+  return t(levelKey(island, level));
 }
 
 // 레벨마다 그림 카드를 그린다: 그림 · 이름(작게) · 성공 점 3개 · 별(다 하면 노란 별, 아니면 빈 별)

@@ -1,0 +1,16 @@
+/* 홈 화면: 의견 보내기 버튼과 의견 창, 두 길 버튼의 추천 연령 */
+.feedback-btn { position: absolute; top: 14px; left: 16px; background: var(--paper); border: 3px solid var(--ink); border-radius: 999px; padding: 5px 14px; font: 400 15px var(--display); cursor: pointer; }
+.course-title { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
+.age-badge { background: var(--paper); border: 2px solid var(--ink); border-radius: 999px; padding: 1px 10px; font-size: 14px; line-height: 1.5; }
+.fast-back { justify-self: start; }
+.gate-overlay { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(27, 36, 64, 0.55); }
+.gate-card { width: min(360px, 100%); display: grid; gap: 12px; text-align: center; background: var(--paper); border: 3px solid var(--ink); border-radius: 22px; padding: 20px 18px; }
+.gate-card strong { font: 400 22px var(--display); }
+.gate-card p { margin: 0; color: var(--muted); }
+.gate-card .link { justify-self: center; }
+.gate-card .gate-wrong { color: #c2410c; }
+.feedback-card textarea { width: 100%; box-sizing: border-box; resize: vertical; border: 3px solid var(--ink); border-radius: 16px; padding: 12px; font: 16px/1.5 inherit; font-family: inherit; }
+.feedback-card .feedback-ask { color: var(--ink); text-align: left; }
+.age-choices { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.chip { background: var(--paper); border: 2px solid var(--ink); border-radius: 999px; padding: 8px 6px; font: 400 15px var(--display); cursor: pointer; }
+.chip.on { background: var(--sun); }

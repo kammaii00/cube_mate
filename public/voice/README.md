@@ -52,13 +52,14 @@
 - 효과음 "짜잔~": src/voice/sfx.ts에서 Web Audio로 합성(파일 없음), 완성 화면에서 음성 앞에 재생
 - homeGo(audio_1), editSolving(audio_17)은 사용 안 함
 
-## 꼬마 코스(큐브 배우기 섬) 음성 — 아직 녹음 전 (파일이 없으면 글자만 보임)
+## 꼬마 코스(큐브 배우기 섬) 음성 — 2026-11-27 녹음 64개 적용 (녹음 원본 audios/audio_64~127)
+아직 없음: 1층 화면 연습 10개(introLayer~cornerAway, 보류), introPetalBottom. 파일이 없으면 글자만 보임.
 문구와 대사는 src/i18n/courseKo.ts, 파일 이름 = 키.
 - 지도: courseMapHello, courseLocked, courseChoose("어떤 걸 해 볼까?", 레벨 고르기)
 - 조각 알기: quizFindEdge, quizFindCorner, quizWhere, quizRight, quizWrong, quizWhereWrong
 - 흰 꽃 화면 연습: introDaisy, introPetalSide, introPetalBottom, introPetalBusy, petalAsk, petalTipSide, petalTipBottom, petalTipBusy, petalRight, petalAway, petalReset
 - 흰 십자 화면 연습: introCross, introCrossDrop, introCrossMatch, crossAsk, crossTipDrop, crossTipMatch, crossRight (멀어졌을 때는 petalAway를 같이 씀)
 - 1층 화면 연습(오른손 춤): introLayer, introCornerDance1, introCornerDanceMore, introCornerBring, cornerAsk, cornerTipDance1, cornerTipDanceMore, cornerTipBring, cornerRight, cornerAway
-- 연습: practiceCheck1~3("흰 꽃이/흰 십자가/1층이 잘 완성됐는지 확인해 보자!", 다 했어! 뒤 확인 화면), practiceMix, practiceHold, practiceGoal1~3, practiceTip1~3, practiceGuideIntro, practiceLeft("잘했어! 조금 남았어", 숫자 없이), practiceNowTry, practiceAlready, practiceCount(숫자 없이 녹음 시 "조금만 더!"), practiceSides, practiceSidesFix, practiceScanFail, practiceShowD, practiceShowU, practicePaintD, practicePaintU
-- 결과: courseGood1~3, courseGoodHint, courseReviewDone("복습 끝! 잘 기억하고 있네!"), courseStar, courseLeft1("한 번만 더 하면 별!"), courseLeft2("두 번 더 하면 별!"), courseLeft3("세 번 하면 별!"), courseRescued0~3
+- 연습: practiceCheck1~3("흰 꽃이/흰 십자가/1층이 잘 완성됐는지 확인해 보자!", 다 했어! 뒤 확인 화면), practiceMix, practiceHold, practiceGoal1~3, practiceTip1~3, practiceGuideIntro, practiceLeft("잘했어! 조금 남았어", 숫자 없이), practiceNowTry, practiceAlready, practiceCount(숫자 없이 녹음 시 "조금만 더!"), practiceSides, practiceSidesFix, practiceScanFail, practiceShowD, practiceShowU, practicePaintD, practicePaintU, practiceRehold("다시 노란색이 하늘, 초록이 나를 보게 잡아!", 보여 준 뒤 같이 하기 전), courseTogetherNote("다 섞으면 큐비한테 보여 줘! 한 조각씩 같이 맞추자", 같이 해 보기 섞기 화면)
+- 결과: courseGood1~3, courseGoodHint, courseReviewDone("복습 끝! 잘 기억하고 있네!"), courseStar("별을 받았어!"), courseLeft1("한 번만 더 하면 별!"), courseLeft2("두 번 더 하면 별!"), courseLeft3("세 번 하면 별!"), courseRescued0~3
 같이 돌리기 안내는 빨리 맞추기 녹음(guideTurn 등)을 그대로 씁니다.

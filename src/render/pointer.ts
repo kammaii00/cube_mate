@@ -48,6 +48,8 @@ export class Pointer {
   private fill: THREE.Mesh;
   private sprite = new THREE.Sprite();
   private base = new THREE.Vector3();
+  /** 이름표가 있고 싶은 자리 (화면 밖으로 나가면 매 프레임 화면 안으로 끌어온다) */
+  private labelHome = new THREE.Vector3();
   private dir = new THREE.Vector3();
   private cache = new Map<string, { texture: THREE.CanvasTexture; aspect: number }>();
 
@@ -63,7 +65,7 @@ export class Pointer {
 
   // 큐브 밖(화면에서 큐브 모습 바깥)에서 target을 가리키는 화살표와 이름표를 보여준다.
   // 뒤쪽·아래쪽처럼 큐브에 가려진 곳을 가리킬 때 쓴다. 큐브 중심에서 target이 보이는 쪽으로 화살표를 뺀다.
-  showOutside(target: Vec3, out: Vec3, label: string, tone: PointerTone): void {
+  showOutside(target: Vec3, out: Vec3, label: string, tone: PointerTone, pill?: string): void {
     const up = new THREE.Vector3(0, 1, 0);
     up.addScaledVector(this.view, -up.dot(this.view)).normalize();
     const right = new THREE.Vector3().crossVectors(up, this.view);
@@ -92,11 +94,11 @@ export class Pointer {
     this.arrow.scale.setScalar(scale);
     this.arrow.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(this.dir, side, this.view));
     this.base.copy(away).multiplyScalar(reach + 0.3 + 1.25 * scale);
-    this.finish(label, tone, up.clone().multiplyScalar(0.8));
+    this.finish(label, tone, up.clone().multiplyScalar(0.8), pill);
   }
 
-  // target(큐브 겉면의 점)을 바깥쪽(out)에서 가리키는 화살표와 이름표를 보여준다
-  show(target: Vec3, out: Vec3, label: string, tone: PointerTone): void {
+  // target(큐브 겉면의 점)을 바깥쪽(out)에서 가리키는 화살표와 이름표를 보여준다 (pill: 이름표 바탕색을 바꿀 때)
+  show(target: Vec3, out: Vec3, label: string, tone: PointerTone, pill?: string): void {
     const outward = new THREE.Vector3(...out).normalize();
     const toward = outward.clone().negate();
     // 화면과 나란한 평면 위에서 "자리 쪽"을 가리키는 방향
@@ -109,22 +111,23 @@ export class Pointer {
     this.arrow.scale.setScalar(ARROW_SCALE);
     const up = new THREE.Vector3(0, 1, 0);
     up.addScaledVector(this.view, -up.dot(this.view)).normalize();
-    this.finish(label, tone, up.multiplyScalar(0.8));
+    this.finish(label, tone, up.multiplyScalar(0.8), pill);
   }
 
   // 화살표 색과 이름표(화살표 중심에서 labelOffset만큼 띄워서)를 정하고 보이게 한다
-  private finish(label: string, tone: PointerTone, labelOffset: THREE.Vector3): void {
+  private finish(label: string, tone: PointerTone, labelOffset: THREE.Vector3, pill = TONES[tone].pill): void {
     (this.fill.material as THREE.MeshBasicMaterial).color.set(TONES[tone].fill);
     this.sprite.visible = label !== '';
     if (label) {
-      const key = tone + label;
-      if (!this.cache.has(key)) this.cache.set(key, labelTexture(label, TONES[tone].pill));
+      const key = tone + label + pill;
+      if (!this.cache.has(key)) this.cache.set(key, labelTexture(label, pill));
       const { texture, aspect } = this.cache.get(key)!;
       const material = new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true });
       this.sprite.material.dispose();
       this.sprite.material = material;
       this.sprite.scale.set(0.66 * aspect, 0.66, 1);
-      this.sprite.position.copy(labelOffset).addScaledVector(this.dir, -0.35).add(this.base);
+      this.labelHome.copy(labelOffset).addScaledVector(this.dir, -0.35).add(this.base);
+      this.sprite.position.copy(this.labelHome);
     }
     this.object.visible = true;
   }
@@ -134,16 +137,24 @@ export class Pointer {
     this.object.visible = false;
   }
 
-  // 매 프레임: 화살표가 가리키는 쪽으로 살짝 움직이고, 이름표가 화면 밖으로 나가지 않게 붙잡는다
+  // 매 프레임: 화살표가 가리키는 쪽으로 살짝 움직이고, 이름표가 화면 밖으로 나가지 않게 붙잡는다.
+  // (첫 화면을 그리기 전에도 맞게 재도록 카메라 위치를 먼저 갱신하고, 늘 원래 자리에서 다시 잰다)
   animate(now: number, camera: THREE.Camera): void {
     if (!this.object.visible) return;
     this.arrow.position.copy(this.base).addScaledVector(this.dir, 0.12 * Math.sin(now / 230));
+    if (!this.sprite.visible) return;
+    camera.updateMatrixWorld();
     this.object.updateWorldMatrix(true, false);
-    const world = this.sprite.position.clone().applyMatrix4(this.object.matrixWorld);
+    const world = this.labelHome.clone().applyMatrix4(this.object.matrixWorld);
     const ndc = world.clone().project(camera);
-    const mx = Math.min(0.9, (this.sprite.scale.x * 0.5) / 2.6 + 0.04);
+    // 이름표 반 너비·반 높이를 화면 비율로 잰다 (이름표 오른쪽 끝·위 끝을 화면에 비춰 본다)
+    const size = this.object.getWorldScale(new THREE.Vector3()).x;
+    const half = (axis: number, length: number) =>
+      Math.abs(world.clone().addScaledVector(new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, axis), (length / 2) * size).project(camera).getComponent(axis) - ndc.getComponent(axis));
+    const mx = Math.min(0.95, half(0, this.sprite.scale.x) + 0.03);
+    const my = Math.min(0.95, half(1, this.sprite.scale.y) + 0.03);
     ndc.x = Math.max(-1 + mx, Math.min(1 - mx, ndc.x));
-    ndc.y = Math.max(-0.88, Math.min(0.88, ndc.y));
+    ndc.y = Math.max(-1 + my, Math.min(1 - my, ndc.y));
     this.sprite.position.copy(ndc.unproject(camera)).applyMatrix4(this.object.matrixWorld.clone().invert());
   }
 }

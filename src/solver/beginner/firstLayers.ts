@@ -48,10 +48,11 @@ function placeCheapest(b: LessonBuilder, pieces: string[], mission: (b: LessonBu
 }
 
 // 1단계: 흰색 모서리 조각 4개를 노란 가운데 둘레(윗면)로 올려 "꽃"을 만든다. 내려야 할 조각 목록을 돌려준다.
-export function makeDaisy(b: LessonBuilder): string[] {
+// full이면 이미 흰 십자 자리에 맞게 들어간 조각도 꽃잎으로 올린다 (꼬마 코스 흰 꽃 섬: 꽃을 꼭 완성해야 한다)
+export function makeDaisy(b: LessonBuilder, full = false): string[] {
   const white = b.state[D_CENTER];
   const all = EDGES.bottom.map((slot) => colorsOfSlot(b.state, EDGE_FACELETS[slot]));
-  const fixed = all.filter((c) => isHome(findPiece(b.state, c, EDGE_FACELETS)));
+  const fixed = full ? [] : all.filter((c) => isHome(findPiece(b.state, c, EDGE_FACELETS)));
   const todo = all.filter((c) => !fixed.includes(c));
   // 흰색 스티커가 윗면을 보기만 하면 되는 추적 조건
   const petal = (colors: string): Tracked => {

@@ -22,6 +22,10 @@ export interface Puzzle {
   cells: number[];
   /** 누를 수 있는 버튼들 */
   buttons: PuzzleButton[];
+  /** 조각이 들어갈 빈자리 칸 (비어 있는 동안 하늘색으로 칠한다) */
+  slot?: number[];
+  /** true면 buttons를 그 순서대로 하나씩 다 눌러야 성공: 차례인 버튼이 처음부터 늘 반짝인다 (오른손 춤을 한 동작씩 배울 때) */
+  guided?: boolean;
   /** 다 됐는지 */
   goal: (state: string) => boolean;
   /** 다 될 때까지 버튼을 몇 번 더 눌러야 하는지 (너무 멀면 Infinity) */
@@ -64,6 +68,12 @@ export function nextButton(state: string, puzzle: Pick<Puzzle, 'buttons' | 'dist
   const now = puzzle.distance(state);
   if (now === 0 || now === Infinity) return null;
   return puzzle.buttons.find((b) => puzzle.distance(press(state, b)) === now - 1) ?? null;
+}
+
+// 빈자리 칸이 아직 회색(X)이면 하늘색(S)으로 칠한 그림 (조각이 들어오면 그 색이 보인다)
+export function paintSlot(state: string, slot?: number[]): string {
+  if (!slot) return state;
+  return [...state].map((c, i) => (c === 'X' && slot.includes(i) ? 'S' : c)).join('');
 }
 
 // 흰색 조각(keep이 고른 모양)과 가운데만 색을 남기고 나머지는 회색(X)으로 바꾼다

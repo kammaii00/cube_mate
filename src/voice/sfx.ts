@@ -71,3 +71,16 @@ export function playStamp(): void {
   src.connect(filter).connect(ngain).connect(ac.destination);
   src.start(t);
 }
+
+/** 별 소리가 시작되는 때(ms): 큰 별이 튀어나오는 애니메이션(0.9초 뒤 시작)에 맞춘다 */
+export const STAR_SOUND_DELAY = 950;
+
+// 별 "반짝반짝 띠링~": 높은 음들이 빠르게 올라가며 반짝인 뒤, 맑은 종소리 화음이 길게 울린다
+export function playStarWin(): void {
+  const ac = audio();
+  if (!ac) return;
+  const t = ac.currentTime + 0.02;
+  [1046.5, 1174.66, 1318.51, 1567.98, 1760, 2093].forEach((f, i) => note(ac, f, t + i * 0.055, 0.22, 0.13));
+  [1567.98, 2093, 2637.02].forEach((f) => note(ac, f, t + 0.38, 1.1, 0.1));
+  [523.25, 783.99].forEach((f) => note(ac, f, t + 0.38, 0.9, 0.12));
+}

@@ -42,12 +42,26 @@ export function PieceIntro({ slides, onDone, doneLabel = 'introStart' }: Props) 
   const [showAll, setShowAll] = useState(!!slide.all);
   /** 다 맞췄을 때 반짝이는 칸 (id가 바뀔 때마다 한 번) */
   const [flash, setFlash] = useState<{ cells: number[]; id: number } | null>(null);
+  /** 다시 보기를 누른 횟수 (바뀌면 큐브를 새로 그려 뒤집기 장면까지 처음부터 보여 준다) */
+  const [replay, setReplay] = useState(0);
 
-  // 장이 바뀌면 처음 모습으로 돌아가고 설명을 말해 준다
-  useEffect(() => {
+  // 지금 장의 애니메이션을 맨 처음 모습으로 되돌린다
+  function rewind() {
     setView({ state: slide.base ?? SOLVED, cells: slide.cells, move: null, id: 0, step: 0 });
     setShowAll(!!slide.all);
-    say(slide.text);
+    setFlash(null);
+  }
+
+  // 다시 보기 버튼: 음성은 그대로 두고 움직임만 처음부터 다시 튼다
+  function restart() {
+    rewind();
+    setReplay((r) => r + 1);
+  }
+
+  // 장이 바뀌면 처음 모습으로 돌아가고 설명(큰 문장 → 작은 글씨)을 말해 준다
+  useEffect(() => {
+    rewind();
+    say([slide.text, `${slide.text}Note` as MessageKey]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [k]);
 
@@ -86,6 +100,7 @@ export function PieceIntro({ slides, onDone, doneLabel = 'introStart' }: Props) 
     <>
       <div className="cube-stage">
         <Cube3D
+          key={replay}
           state={view.state}
           move={view.move}
           playId={view.id}
@@ -95,12 +110,13 @@ export function PieceIntro({ slides, onDone, doneLabel = 'introStart' }: Props) 
           keepHighlight
           bright={slide.bright}
           glow={!slide.fast || !view.move}
-          dim={!slide.flip}
+          dim={!slide.flip && !slide.vivid}
           sticky={!!slide.flip}
           view={slide.flip ? { kind: 'flip', id: k + 1 } : null}
           flash={flash}
           onAnimationEnd={turned}
         />
+        <button className="intro-replay" onClick={restart} aria-label={t('guideReplay')}>↺</button>
       </div>
       <Bubble>
         <strong className="move-title">{t(slide.text)}</strong>

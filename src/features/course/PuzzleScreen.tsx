@@ -4,7 +4,7 @@ import type { Face } from '../../core/faces';
 import { applyMove, type Move } from '../../core/moves';
 import { makePuzzle } from '../../course/makePuzzle';
 import { followCells } from '../../course/pieces';
-import { DANCE, buttonMoves, nextButton, type PuzzleButton, type PuzzleKind } from '../../course/puzzle';
+import { DANCE, buttonMoves, nextButton, paintSlot, type PuzzleButton, type PuzzleKind } from '../../course/puzzle';
 import { WINS_PER_LEVEL } from '../../course/skills';
 import { useI18n, type MessageKey } from '../../i18n';
 import { Cube3D } from '../../render/Cube3D';
@@ -65,6 +65,8 @@ export function PuzzleScreen({ kind, onAnswer, onIntro, wins, review = false }: 
   const [note, setNote] = useState<'away' | 'reset' | null>(null);
   const [done, setDone] = useState(false);
   const move = cube.queue[0] ?? null;
+  /** 순서대로 누르는 연습에서 지금까지 차례대로 눌렀는지 */
+  const onTrack = cube.history.every((b, i) => b === puzzle.buttons[i]);
   const busy = !!move || done;
 
   // 문제가 나오면 무엇을 할지 말해 준다
@@ -87,6 +89,7 @@ export function PuzzleScreen({ kind, onAnswer, onIntro, wins, review = false }: 
     const rest = cube.queue.slice(1);
     setCube((c) => ({ ...c, state, cells: followCells(c.cells, move), queue: rest, id: rest.length ? c.id + 1 : c.id }));
     if (rest.length) return;
+    if (puzzle.guided) return stepDone();
     if (puzzle.goal(state)) return right();
     const after = puzzle.distance(state);
     if (cube.undoing && after !== Infinity) return setNote(null);
@@ -95,6 +98,14 @@ export function PuzzleScreen({ kind, onAnswer, onIntro, wins, review = false }: 
       return showNote(after === Infinity ? 'reset' : 'away');
     }
     setNote(null);
+  }
+
+  // 순서대로 누르는 연습: 순서대로 다 눌렀으면 성공, 순서가 틀렸으면 되돌리라고 알려 준다
+  function stepDone() {
+    if (onTrack && cube.history.length === puzzle.buttons.length) return right();
+    if (cube.undoing || onTrack) return setNote(null);
+    setAway((n) => n + 1);
+    showNote('away');
   }
 
   // 큐비가 한마디 하고 말풍선에 남긴다
@@ -119,7 +130,7 @@ export function PuzzleScreen({ kind, onAnswer, onIntro, wins, review = false }: 
   }
 
   const last = cube.history[cube.history.length - 1];
-  const hint = !done && !move && away >= HINT_AFTER ? nextButton(cube.state, puzzle) : null;
+  const hint = done || move ? null : puzzle.guided ? (onTrack ? puzzle.buttons[cube.history.length] : null) : away >= HINT_AFTER ? nextButton(cube.state, puzzle) : null;
   const centers = { U: cube.state[4], F: cube.state[22], R: cube.state[13] } as { U: Face; F: Face; R: Face };
   const filled = wins + (done && (review || away < HINT_AFTER) ? 1 : 0);
   const title = done ? text.right : note === 'away' ? text.away : note === 'reset' ? 'petalReset' : text.ask;
@@ -129,21 +140,21 @@ export function PuzzleScreen({ kind, onAnswer, onIntro, wins, review = false }: 
         <StampRow count={filled} total={WINS_PER_LEVEL} size={30} fresh={filled > wins ? filled - 1 : -1} />
       </div>
       <div className="cube-stage petal-stage">
-        <Cube3D state={cube.state} move={move} playId={cube.id} duration={cube.dance ? DANCE_MS : TURN_MS} lead={cube.dance ? DANCE_LEAD_MS : undefined} highlight={cube.cells} glow={!move} dim={false} sticky onAnimationEnd={turned} />
+        <Cube3D state={paintSlot(cube.state, puzzle.slot)} move={move} playId={cube.id} duration={cube.dance ? DANCE_MS : TURN_MS} lead={cube.dance ? DANCE_LEAD_MS : undefined} highlight={cube.cells} glow={!move} dim={false} sticky onAnimationEnd={turned} />
       </div>
       <Bubble tone={done ? 'good' : note ? 'warn' : 'normal'}>
         <strong className="move-title">{t(title)}</strong>
         {!done && <small className="course-tip">{t(text.tip)}</small>}
       </Bubble>
       <div className={`move-grid n${puzzle.buttons.length}`}>
-        {puzzle.buttons.map((b) => (
+        {puzzle.buttons.map((b, i) => (
           <button key={b} className={`move-btn${hint === b ? ' hint' : ''}${b === 'dance' ? ' dance' : ''}`} disabled={busy} onClick={() => tap(b)} aria-label={t(buttonName(b))}>
             {b === 'dance' ? (
               <span className="dance-icons">{DANCE.map((m) => <MoveIcon key={m} move={m} colors={centers} size={34} />)}</span>
             ) : (
               <MoveIcon move={b} colors={centers} size={50} />
             )}
-            <small>{t(buttonName(b))}</small>
+            <small>{puzzle.guided ? `${i + 1}. ` : ''}{t(buttonName(b))}</small>
           </button>
         ))}
       </div>

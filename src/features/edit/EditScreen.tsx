@@ -23,7 +23,7 @@ interface Props {
   /** 풀이 결과와, 풀이에 사용한 (수정이 반영된) 큐브 상태를 넘긴다 */
   onSolved: (solution: Solution, state: string) => void;
   onBack: () => void;
-  /** 주면 풀이 대신 색이 맞는지만 보고 이 함수로 넘긴다 (꼬마 코스 "큐비한테 보여 주기": 버튼 문구도 바뀌고 섞기 버튼은 숨긴다) */
+  /** 주면 풀이 대신 색이 맞는지만 보고 이 함수로 넘긴다 (꼬마 코스 "큐비한테 보여 주기": 버튼 문구가 바뀐다) */
   onReady?: (state: string) => void;
 }
 
@@ -167,7 +167,7 @@ export function EditScreen({ initialState, source, onSolved, onBack, onReady }: 
       )}
 
       <div className="row">
-        {onReady ? <span /> : <button className="btn small" onClick={() => update(randomState())}>🎲 {t('editRandom')}</button>}
+        <button className="btn small" onClick={() => update(randomState())}>🎲 {t('editRandom')}</button>
         <button className="btn small" onClick={() => update(emptyState())}>{t('editClear')}</button>
       </div>
       <button className="btn primary" disabled={solving} onClick={() => startSolve(false)}>

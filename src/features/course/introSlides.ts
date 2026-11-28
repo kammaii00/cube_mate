@@ -21,6 +21,8 @@ export interface Slide {
   flip?: boolean;
   /** 흐리게 하지 않고 늘 밝게 둘 칸 (꽃잎 소개: 노란 가운데와 꽃잎 자리) */
   bright?: number[];
+  /** 흐리게 하지 않는다 (이미 회색으로 칠한 그림: 남은 색 조각이 모두 잘 보이게) */
+  vivid?: boolean;
   /** 빨리 돌린다 (오른손 춤처럼 회전이 많을 때) */
   fast?: boolean;
   text: MessageKey;
@@ -44,14 +46,16 @@ const edgesOnly = (s: string) => keepWhite(s, (p) => p.length === 2);
 const CROSS_CELLS = [28, 30, 32, 34, 16, 25, 43, 52];
 const drop = (setup: Move[], moves: Move[]) => {
   const cells = follow(UF, setup);
-  return { base: edgesOnly(applyMoves(DAISY, setup)), cells, moves, finish: follow(cells, moves) };
+  const base = edgesOnly(applyMoves(DAISY, setup));
+  return { base, cells, moves, finish: follow(cells, moves), vivid: true };
 };
 
 /** 1층: 흰 조각과 가운데만 색을 남긴 그림. 꼭짓점을 춤을 거꾸로 춰서 뺀 모습에서 다시 춤으로 넣는다 */
 const dance = (times: number, top: Move[] = []) => {
   const setup = [...Array.from({ length: times }, () => UNDANCE).flat(), ...top];
   const moves = [...top.map(invertMove).reverse(), ...Array.from({ length: times }, () => DANCE).flat()];
-  return { base: keepWhite(applyMoves(YELLOW_UP, setup), () => true), cells: follow(DFR, setup), moves, finish: DFR, fast: true };
+  const base = keepWhite(applyMoves(YELLOW_UP, setup), () => true);
+  return { base, cells: follow(DFR, setup), moves, finish: DFR, fast: true, vivid: true };
 };
 
 export const SLIDES = {

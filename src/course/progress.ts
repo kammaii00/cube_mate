@@ -58,9 +58,14 @@ export function islandOpen(data: CourseData, island: number): boolean {
   return island === 0 || islandDone(data, island - 1);
 }
 
+// 섬에서 아직 별을 못 받은 첫 레벨 (다 받았으면 -1)
+export function firstOpenLevel(data: CourseData, island: number): number {
+  return data.wins[island].findIndex((w) => w < WINS_PER_LEVEL);
+}
+
 // 섬에서 지금 할 레벨 (다 깼으면 마지막 레벨을 다시 연습)
 export function currentLevel(data: CourseData, island: number): number {
-  const k = data.wins[island].findIndex((w) => w < WINS_PER_LEVEL);
+  const k = firstOpenLevel(data, island);
   return k < 0 ? ISLANDS[island].levels.length - 1 : k;
 }
 

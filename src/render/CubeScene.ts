@@ -16,6 +16,8 @@ const FADE_COLOR = new THREE.Color('#dfe9f5');
 /** 특정 칸만 보여줄 때 나머지 칸에 섞는 색 (흰색 칸과도 구분되도록 어둡게) */
 /** 들어갈 자리 칸을 칠하는 분홍색 */
 const SLOT_COLOR = new THREE.Color('#ff3db8');
+/** 조용한 자리 깜빡임이 오가는 색 (하늘색 칸이 진한 하늘색이 됐다 돌아온다. 흰 꽃잎과 헷갈리지 않게 흰색으로는 안 간다) */
+const SOFT_PULSE_COLOR = new THREE.Color('#3fa2e3');
 const DIM_COLOR = new THREE.Color('#8a94ad');
 const VIEW_DIRECTION = new THREE.Vector3(0.62, 0.55, 0.9).normalize();
 const VIEW_POSITION = VIEW_DIRECTION.clone().multiplyScalar(9.8);
@@ -29,6 +31,10 @@ const GLOW_ARROW_LEAD = 400;
 export interface Marks {
   piece?: number[];
   slot?: number[];
+  /** 조각 화살표 이름표 (글자와 바탕색). 없으면 기본 이름표 */
+  label?: { text: string; color?: string };
+  /** true면 자리는 이름표 없이 은은하게 깜빡이고, 안 보이는 쪽일 때만 이름 없는 화살표를 띄운다 */
+  quietSlot?: boolean;
 }
 
 /** 화살표 이름표 글자 (조각, 자리). 안 보이는 쪽을 가리키는 화살표에는 이름표를 붙이지 않는다 */
@@ -76,7 +82,7 @@ export class CubeScene {
   /** 보이지 않는 곳을 가리키는 화살표 2개와 들어갈 자리 상자 */
   private pointers = [new Pointer(VIEW_DIRECTION), new Pointer(VIEW_DIRECTION)];
   /** 들어갈 자리 칸들을 분홍색으로 깜빡이게 하기 위한 원래 색 */
-  private pulse: { cells: number[]; colors: THREE.Color[] } | null = null;
+  private pulse: { cells: number[]; colors: THREE.Color[]; soft?: boolean } | null = null;
   private labels: PointerLabels = {};
   /** 강조 칸 둘레의 반짝이는 테두리 */
   private glow = new StickerGlow();
@@ -271,8 +277,9 @@ export class CubeScene {
   // 매 프레임: 들어갈 자리 칸들을 원래 색과 분홍색 사이로 깜빡이게 한다
   private animatePulse(now: number): void {
     if (!this.pulse) return;
-    const mix = 0.7 + 0.25 * Math.sin(now / 260);
-    this.pulse.cells.forEach((cell, k) => this.stickers[cell].material.color.copy(this.pulse!.colors[k]).lerp(SLOT_COLOR, mix));
+    const soft = this.pulse.soft;
+    const mix = soft ? 0.3 + 0.3 * Math.sin(now / 420) : 0.7 + 0.25 * Math.sin(now / 260);
+    this.pulse.cells.forEach((cell, k) => this.stickers[cell].material.color.copy(this.pulse!.colors[k]).lerp(soft ? SOFT_PULSE_COLOR : SLOT_COLOR, mix));
   }
 
   // 화살표 이름표 글자를 정한다
@@ -290,24 +297,25 @@ export class CubeScene {
     return { target: [pos[0] + (out[0] / len) * 0.5, pos[1] + (out[1] / len) * 0.5, pos[2] + (out[2] / len) * 0.5], out };
   }
 
-  // 칸 묶음을 가리키는 화살표를 하나 띄운다
-  private pointAt(index: number, cells: number[], tone: 'piece' | 'slot'): void {
-    const base = this.labels[tone];
+  // 칸 묶음을 가리키는 화살표를 하나 띄운다 (label이 있으면 그 글자·바탕색 이름표, quiet면 안 보일 때만 화살표)
+  private pointAt(index: number, cells: number[], tone: 'piece' | 'slot', label?: Marks['label'], quiet = false): void {
+    const base = label?.text ?? this.labels[tone];
     if (!base) return;
     // 눈에 보이는 칸이 하나도 없으면 큐브 밖에서 화살표만 보여준다 (큐브를 돌려서 찾아볼 수 있으므로)
     const hidden = cells.every((i) => VIEW_DIRECTION.dot(new THREE.Vector3(...FACELETS[i].normal)) <= 0);
     const { target, out } = this.surfaceOf(cells);
     // 눈에 보이는 칸이 없으면 큐브 밖에서, 보이면 그 칸 바로 앞에서 가리킨다
-    if (hidden) this.pointers[index].showOutside(target, out, '', tone);
-    else this.pointers[index].show(target, out, base, tone);
+    if (hidden) this.pointers[index].showOutside(target, out, label?.text ?? '', tone, label?.color);
+    else if (!quiet) this.pointers[index].show(target, out, base, tone, label?.color);
   }
 
-  // 찾을 조각과 들어갈 자리를 표시한다 (둘 다 화살표와 이름표, 자리는 칸 색이 분홍색으로 깜빡임)
+  // 찾을 조각과 들어갈 자리를 표시한다 (조각은 화살표와 이름표, 자리는 칸 색이 깜빡이고 화살표와 이름표.
+  // quietSlot이면 자리는 하얗게 은은히 깜빡이기만 하고, 안 보일 때만 이름 없는 화살표)
   private showMarks(marks: Marks | null | undefined): void {
-    if (marks?.piece?.length) this.pointAt(0, marks.piece, 'piece');
+    if (marks?.piece?.length) this.pointAt(0, marks.piece, 'piece', marks.label);
     if (marks?.slot?.length) {
-      this.pulse = { cells: marks.slot, colors: marks.slot.map((i) => this.stickers[i].material.color.clone()) };
-      this.pointAt(1, marks.slot, 'slot');
+      this.pulse = { cells: marks.slot, colors: marks.slot.map((i) => this.stickers[i].material.color.clone()), soft: marks.quietSlot };
+      this.pointAt(1, marks.slot, 'slot', undefined, marks.quietSlot);
     }
   }
 

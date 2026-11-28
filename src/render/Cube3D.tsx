@@ -44,6 +44,9 @@ interface Props {
 }
 
 // 3D 큐브를 표시하고, move가 주어지면 그 회전을 재생한다
+/** 모든 칸 (흐리게 하지 않을 때 돌리는 동안에도 전부 선명하게) */
+const ALL_CELLS = Array.from({ length: 54 }, (_, i) => i);
+
 export function Cube3D({ state, move, playId = 0, duration = 1100, lead, bright, highlight, marks, glow = false, watch, spin = false, sticky = false, keepHighlight = false, dim = true, view, flash, onPick, onAnimationEnd }: Props) {
   const { t } = useI18n();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -73,12 +76,12 @@ export function Cube3D({ state, move, playId = 0, duration = 1100, lead, bright,
       return;
     }
     let active = true;
-    scene.playMove(state, move, duration, glow, watch, keepHighlight ? highlight : null, lead).then(() => active && endRef.current?.());
+    scene.playMove(state, move, duration, glow, watch, keepHighlight ? (dim ? highlight : ALL_CELLS) : null, lead).then(() => active && endRef.current?.());
     return () => {
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state, move, playId, duration, lead, bright?.join(','), spin, glow, dim, highlight?.join(','), marks?.piece?.join(','), marks?.slot?.join(','), watch?.from, t]);
+  }, [state, move, playId, duration, lead, bright?.join(','), spin, glow, dim, highlight?.join(','), marks?.piece?.join(','), marks?.slot?.join(','), marks?.label?.text, marks?.label?.color, marks?.quietSlot, watch?.from, t]);
 
   // 끌어 돌린 방향 유지, 보는 방향 버튼, 깜빡임은 각각 바뀔 때만 적용한다
   useEffect(() => sceneRef.current?.setSticky(sticky), [sticky, spin]);

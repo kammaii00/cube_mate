@@ -2,7 +2,7 @@
 import { applyMoves, invertMove, type Move } from '../core/moves';
 import { YELLOW_UP } from './petal';
 import { followCells } from './pieces';
-import { DANCE, keepWhite, pickOne, randomTurns, type CornerKind, type Puzzle } from './puzzle';
+import { DANCE, keepWhite, pickOne, randomTurns, stepsTo, type CornerKind, type Puzzle, type PuzzleButton } from './puzzle';
 
 /** 오른쪽 앞 아래 꼭짓점 칸 (아래, 앞, 오른쪽) */
 export const DFR = [29, 26, 15];
@@ -17,6 +17,9 @@ const TOP_TURNS: { moves: Move[]; cost: number }[] = [
   { moves: ['U2'], cost: 2 },
   { moves: ["U'"], cost: 1 },
 ];
+
+/** 종류마다 누를 수 있는 버튼: 춤 한 번은 춤을 네 동작으로 나눠 차례로, 여러 번은 춤 버튼만, 데려오기는 윗면 돌리기도 */
+const BUTTONS: Record<CornerKind, PuzzleButton[]> = { dance1: DANCE, danceMore: ['dance'], bring: ['U', "U'", 'dance'] };
 
 /** 종류마다 꼭짓점을 빼낸 횟수 (춤을 거꾸로 1번: 흰색 오른쪽 → 1번에 들어감, 3번: 흰색 위, 5번: 흰색 앞) */
 const UNDANCES: Record<CornerKind, number[]> = { dance1: [1], danceMore: [3, 5], bring: [1, 3, 5] };
@@ -44,5 +47,9 @@ export function makeCorner(kind: CornerKind, rand = Math.random): Puzzle {
   const state = applyMoves(solved, moves);
   const cells = moves.reduce((c, m) => followCells(c, m), DFR);
   const goal = (s: string) => FIRST_LAYER.every((i) => s[i] === solved[i]);
-  return { kind, state: keepWhite(state, () => true), cells, buttons: ['U', "U'", 'dance'], goal, distance: (s) => danceDistance(s, goal) };
+  const buttons = BUTTONS[kind];
+  const shown = keepWhite(state, () => true);
+  // 춤 한 번(동작 나눔): 버튼 네 개를 차례대로 다 눌러야 성공 (마지막 '당기기'는 1층을 안 바꿔도 춤의 일부라 PuzzleScreen이 순서로 본다)
+  if (kind === 'dance1') return { kind, state: shown, cells, slot: DFR, buttons, guided: true, goal, distance: (s) => stepsTo(s, buttons, goal, 6) };
+  return { kind, state: shown, cells, slot: DFR, buttons, goal, distance: (s) => danceDistance(s, goal) };
 }
